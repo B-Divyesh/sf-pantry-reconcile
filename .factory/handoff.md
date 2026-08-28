@@ -1,49 +1,53 @@
-# Pantry Check — independent verification handoff
+# Pantry Check — repair handoff
 
-## Release status: FAIL
+## Release status: READY TO DEPLOY
 
-- Work order: `pantry-reconcile-verify-3`
-- Candidate: `3e59b51db84eb05f7225d216298750b5f0358466`
-- Live URL: <https://pantry-reconcile.sociobot.in>
-- Verified: 2026-08-28 UTC
-- Full report: [`.factory/verification-3.md`](verification-3.md)
+- Work order: `pantry-reconcile-repair-3`
+- Repair base: `ccd51732bbc7492ca0d3c568c81e7345ad428751`
+- Repaired candidate: recorded after commit below
+- Product: static local-first PWA; deployment target remains `https://pantry-reconcile.sociobot.in`
+- Date: 2026-08-28 UTC
 
-The live deployment is byte-identical to the candidate and the prior deployment-level defects are repaired. This FAIL comes from fresh candidate evidence, not a stale or deployment-only condition.
+## Repaired verifier findings
 
-## Release blockers
+1. Added `.factory/claims.json` with five observable product promises and exactly one tagged `/demo` Playwright regression per promise. Every listed command passed in both Chromium desktop and the 390 px mobile project.
+2. Replaced the unsafe “See how a check works” writer with a visible **Try it with sample data** link to `/demo`. Demo records use the separate `demo:pantry-check` IndexedDB namespace. The persistent banner provides **Reset demo** and **Start for real**; reset deletes and reseeds only the demo database. `.factory/demo.md` documents the sample and boundary.
+3. Repaired navigation history with `pushState` plus `popstate`. Back/Forward restores the selected app view, moves focus to the new page `<h1>`, and announces it through a polite live region.
+4. Made the job headline the page `<h1>`, supplied page-specific `<h1>`s for app, demo, legal, and unknown paths, and added the styled unknown-path 404 state. The landing page now includes How it works, privacy/limits, footer factory/build identity, and a copy audit.
+5. Added canonical, Open Graph, Twitter, apple-touch metadata, `/demo` sitemap entry, and reviewed `public/social-preview.webp` (1200×630 deterministic crop of original project artwork). Provenance is recorded in `.factory/design.md`.
+6. Bumped the PWA cache to `pantry-v7` and manifest launch version to `v=2`, ensuring existing installs receive this release through the already-tested update path.
 
-1. `.factory/claims.json` is missing. No required claim test commands or `@claim:<id>` tests exist, while the live page and README make offline, privacy, speed, export/share, and encrypted-backup claims.
-2. The mandatory isolated sample-data demo does not exist. “See how a check works” writes Milk and an event into the real `pantry-check` IndexedDB; there is no `/demo`/`?demo=1` seed, demo banner, reset, start-for-real action, separate namespace, or `.factory/demo.md`.
-
-Additional Medium defects: in-app navigation uses `replaceState`, so Back exits instead of returning to the prior view; route changes do not focus/announce a new heading; unknown paths return the normal home screen with HTTP 200; required page-heading and landing-shell structure is incomplete. Metadata and `.factory/copy-audit.md` omissions are Low severity.
-
-## Verification summary
+## Verification evidence
 
 ```text
-npm ci                         PASS — 164 packages, 0 vulnerabilities
-claims manifest/tests          FAIL — .factory/claims.json missing
-npm test                       PASS — 3 files, 9 tests
-npm run typecheck              PASS
-npm run lint                   PASS
-npm run build                  PASS — dist/ produced
-npm run test:e2e               PASS — 18/18 desktop/mobile tests
-factory verify-url.sh          PASS — 200, 806 ms, no console/page errors
-independent axe                PASS — 0 serious/critical in all tested states
-live artifact identity         PASS — 16/16 files byte-identical
-offline reload / SW update     PASS / PASS
-Lighthouse                    100 / 100 / 100 / 100
+npm ci                                      PASS — 164 packages, 0 vulnerabilities
+npm run typecheck                           PASS
+npm run lint                                PASS
+npm test                                    PASS — 10/10 Vitest tests
+npm run build                               PASS — dist/index.html produced
+npm run test:e2e                            PASS — 32/32 Playwright tests (desktop + Pixel 5)
+all 5 .factory/claims.json commands         PASS — each ran desktop + mobile /demo regression
+/opt/fleet/lib/verify-url.sh local preview  PASS — HTTP 200, 671 ms, zero console/page errors
+Playwright Axe integration                  PASS — 0 serious/critical on empty, legal, reconcile, demo pantry/shopping/settings
 ```
 
-Independent flows covered normal and boundary records, invalid/duplicate recovery, persistence, search, Seen/Used/Expired, shopping/share/CSV, restock/undo, encrypted export and restore, malformed/wrong-passphrase errors, keyboard/dialog focus, 390 px touch/layout, reduced motion, privacy requests, response headers, cache policy, offline reload, and service-worker replacement.
+The claims cover isolated/resettable demo storage, offline reload after a first visit, same-origin local-only demo use, CSV output rows, and encrypted backup ciphertext.
 
-## Positive evidence
+Local production output is within the static budgets: JavaScript 11.40 KB gzip, CSS 5.66 KB gzip, fonts 84.88 KB total, and the mobile artwork 22.77 KB. The standalone `@axe-core/cli` was attempted but could not start because its ChromeDriver supports Chrome 152 while the pinned Playwright Chromium is 145; the equivalent in-repo `@axe-core/playwright` audits passed.
 
-- Core reconciliation is useful and works end to end.
-- Normal use made zero cross-origin requests and emitted zero console/page errors.
-- The restrictive CSP, security headers, immutable hashed-asset caching, correct manifest MIME type, and local IndexedDB boundary are live.
-- `pantry-v6` survives offline reload. A controlled candidate update showed the update toast, activated on request, and removed the old cache.
-- Production payloads are within budget: 10.53 KB gzip JS, 5.46 KB gzip CSS, 84.88 KB fonts, and 22.77 KB mobile artwork. Lighthouse LCP was 1.2 s and CLS 0.039.
+## Run and deploy
 
-## Next steps
+```bash
+npm ci
+npm run typecheck
+npm run lint
+npm test
+npm run test:e2e
+npm run build
+```
 
-Implement the claims registry/tests and a genuinely isolated demo first. Then repair history/route semantics and required site structure, and rerun the full command and browser matrix in [`.factory/verification-3.md`](verification-3.md). Do not mark the release PASS until the mandatory first two gates pass from a clean clone.
+Publish `dist/` as the static PWA using `/opt/fleet/lib/deploy-static.sh pantry-reconcile dist`.
+
+## Known gaps
+
+No product gap is known. Lighthouse could not be rerun locally because the Lighthouse browser tab crashed in this container; the repair changes preserve the prior small payload profile, and the prior live baseline was 100/100/100/100. Deployment identity, response headers, live Lighthouse, and controlled service-worker update are repeated after deployment.

@@ -1,20 +1,23 @@
 # Pantry Check
 
-Pantry Check is an offline-first pantry confidence tool for busy shared households. Instead of asking everyone to record every meal, it turns an occasional fridge, freezer, or pantry scan into a quick “seen / used up / expired” pass. Old and unconfirmed items rise to the front, and anything that left the house becomes a small, shareable shopping delta.
+Pantry Check helps shared kitchens review what is still there. Add familiar items, run a check, and keep the shopping change small.
 
 Live product: <https://pantry-reconcile.sociobot.in>
 
-## What it does
+## Try the sample
 
-- Keeps fridge, freezer, and pantry items locally in IndexedDB—no account required.
-- Orders reconciliation passes by uncertainty and zone-specific age.
-- Supports touch swipes, labelled buttons, and `S` / `U` / `E` keyboard shortcuts.
-- Builds a shareable or CSV shopping delta and returns restocked items to inventory.
-- Creates password-protected AES-GCM backups for moving household data between devices.
-- Installs as a PWA and reloads the app shell and local data offline.
-- Keeps every current feature available without an account, purchase, or subscription.
+Open [the isolated demo](https://pantry-reconcile.sociobot.in/demo). It opens sample data in `demo:pantry-check`, separate from a real pantry. **Reset demo** rebuilds the sample. **Start for real** opens the real local pantry without copying sample data.
 
-Expiry status is a household reminder, not food-safety advice or a guarantee that an item is safe to consume.
+## Tested product promises
+
+- Works offline after the first visit.
+- Pantry data stays on this device; normal use makes no third-party or cross-origin application requests.
+- Exports the shopping change as CSV.
+- Downloads an encrypted pantry backup.
+
+Every promise is mapped to a deterministic `/demo` browser test in [`.factory/claims.json`](.factory/claims.json).
+
+Expiry status is a household reminder. It is not food-safety advice.
 
 ## Run locally
 
@@ -36,11 +39,11 @@ npm run build
 npm run test:e2e
 ```
 
-`npm run build` is the deployment command and writes the static product to `dist/`, with `dist/index.html` at its root. Browser tests use Playwright 1.58.2 and cover desktop, mobile, accessibility, persistence, and an explicitly offline reload.
+`npm run build` writes the static product to `dist/`, with `dist/index.html` at its root. Browser tests use Playwright 1.58.2. Run every command in `.factory/claims.json` before release.
 
 ## Data and privacy
 
-Pantry contents and history stay in the browser. Normal use makes no application API requests, analytics calls, or checkout requests. See [`/privacy`](https://pantry-reconcile.sociobot.in/privacy) and [`/terms`](https://pantry-reconcile.sociobot.in/terms).
+See [`/privacy`](https://pantry-reconcile.sociobot.in/privacy) and [`/terms`](https://pantry-reconcile.sociobot.in/terms).
 
 Generated image provenance, palette, type, spacing, and motion decisions are recorded in [`.factory/design.md`](.factory/design.md). The original prompt and source are in `assets/src/`.
 

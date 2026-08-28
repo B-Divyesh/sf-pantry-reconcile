@@ -1,0 +1,37 @@
+[
+  {
+    "id": "demo-isolated",
+    "claim": "Try it with sample data opens a stocked pantry in a separate, resettable space.",
+    "where": "landing action, demo banner, README",
+    "test": "npm run test:e2e -- --grep @claim:demo-isolated",
+    "sandbox": "fresh browser context; open /demo through the landing action; reset the sample; assert only demo:pantry-check exists"
+  },
+  {
+    "id": "offline-reload",
+    "claim": "Works offline after the first visit.",
+    "where": "landing facts, README",
+    "test": "npm run test:e2e -- --grep @claim:offline-reload",
+    "sandbox": "fresh browser context; open /demo; wait for the service worker; set context offline; reload; assert sample data remains visible"
+  },
+  {
+    "id": "local-only",
+    "claim": "Pantry data stays on this device; normal use makes no third-party or cross-origin application requests.",
+    "where": "landing facts, footer, privacy page, README",
+    "test": "npm run test:e2e -- --grep @claim:local-only",
+    "sandbox": "fresh browser context; use the demo check while collecting requests; assert same-origin only and that data uses demo:pantry-check"
+  },
+  {
+    "id": "csv-export",
+    "claim": "Exports the shopping change as CSV.",
+    "where": "shopping toolbar, README",
+    "test": "npm run test:e2e -- --grep @claim:csv-export",
+    "sandbox": "fresh browser context; open /demo; export its seeded shopping change; assert the downloaded header and item row"
+  },
+  {
+    "id": "encrypted-backup",
+    "claim": "Downloads an encrypted pantry backup.",
+    "where": "settings, README",
+    "test": "npm run test:e2e -- --grep @claim:encrypted-backup",
+    "sandbox": "fresh browser context; open /demo; download with a passphrase; assert the file excludes the sample item and passphrase plaintext"
+  }
+]

@@ -3,7 +3,7 @@
   "short_name": "Pantry",
   "description": "Quick confidence-based pantry reconciliation for shared households.",
   "id": "/",
-  "start_url": "/?source=installed&v=1",
+  "start_url": "/?source=installed&v=2",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait-primary",

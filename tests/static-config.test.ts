@@ -22,7 +22,7 @@ describe('static-host response policy', () => {
 
   it('precache-discovers fingerprinted responsive artwork instead of stale public image paths', () => {
     const worker = readFileSync(resolve(process.cwd(), 'public/sw.js'), 'utf8');
-    expect(worker).toContain("const VERSION = 'pantry-v6'");
+    expect(worker).toContain("const VERSION = 'pantry-v7'");
     expect(worker).toContain('src|href|srcset');
     expect(worker).not.toContain('/images/pantry-landscape');
   });
@@ -33,5 +33,13 @@ describe('static-host response policy', () => {
     expect(app).not.toContain('/checkout');
     expect(app).not.toContain('sb_license:');
     expect(app).not.toContain('style="');
+  });
+
+  it('ships canonical and social metadata from original pantry artwork', () => {
+    const html = readFileSync(resolve(process.cwd(), 'index.html'), 'utf8');
+    expect(html).toContain('rel="canonical" href="https://pantry-reconcile.sociobot.in/"');
+    expect(html).toContain('property="og:image" content="https://pantry-reconcile.sociobot.in/social-preview.webp"');
+    expect(html).toContain('name="twitter:card" content="summary_large_image"');
+    expect(html).toContain('rel="apple-touch-icon"');
   });
 });
