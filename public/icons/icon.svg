@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Pantry Check">
+  <rect width="512" height="512" rx="116" fill="#07131b"/>
+  <path d="M112 132c0-22 18-40 40-40h208c22 0 40 18 40 40v248c0 22-18 40-40 40H152c-22 0-40-18-40-40V132Z" fill="#13303b" stroke="#77f2d2" stroke-width="16"/>
+  <path d="M120 242h272M248 100v312" stroke="#315563" stroke-width="14"/>
+  <circle cx="187" cy="176" r="30" fill="#ffc46b"/>
+  <path d="m301 321 26 26 52-68" fill="none" stroke="#77f2d2" stroke-linecap="round" stroke-linejoin="round" stroke-width="24"/>
+</svg>

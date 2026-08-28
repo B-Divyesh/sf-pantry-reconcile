@@ -1,0 +1,20 @@
+{
+  "name": "Pantry Check",
+  "short_name": "Pantry",
+  "description": "Quick confidence-based pantry reconciliation for shared households.",
+  "id": "/",
+  "start_url": "/?source=installed&v=1",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#07131B",
+  "theme_color": "#07131B",
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Start a pantry check", "url": "/?view=reconcile", "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Shopping delta", "url": "/?view=shopping", "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }] }
+  ]
+}
