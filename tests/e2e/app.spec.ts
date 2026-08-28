@@ -88,13 +88,38 @@ test('uses a valid labelled progress element with no serious reconcile axe findi
 test('keeps header and footer controls at least 44 pixels at 390px', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/');
-  for (const control of [page.locator('.topbar .add-button'), page.locator('footer a[href="/privacy"]'), page.locator('footer a[href="/terms"]')]) {
+  for (const control of [page.locator('.brand'), page.locator('.topbar .add-button'), page.locator('footer a[href="/privacy"]'), page.locator('footer a[href="/terms"]')]) {
     const box = await control.boundingBox();
     expect(box).not.toBeNull();
     expect(box!.width).toBeGreaterThanOrEqual(44);
     expect(box!.height).toBeGreaterThanOrEqual(44);
   }
   expect(await page.locator('html').evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
+});
+
+test('renders CSP-safe zone confidence and keeps the empty-state action above the mobile dock', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/');
+  const cta = page.getByRole('button', { name: 'Add your first item' });
+  const ctaBox = await cta.boundingBox();
+  const dockBox = await page.locator('.app-nav').boundingBox();
+  expect(ctaBox).not.toBeNull();
+  expect(dockBox).not.toBeNull();
+  expect(ctaBox!.y + ctaBox!.height).toBeLessThanOrEqual(dockBox!.y);
+  expect(await page.evaluate(({ x, y }) => document.elementFromPoint(x, y)?.closest('button')?.textContent?.includes('Add your first item'), { x: ctaBox!.x + ctaBox!.width / 2, y: ctaBox!.y + ctaBox!.height / 2 })).toBe(true);
+  await cta.click();
+  await page.getByLabel('Item name').fill('Oat milk');
+  await page.getByRole('button', { name: 'Save item' }).click();
+  await page.getByRole('button', { name: 'Start a check' }).click();
+  await page.keyboard.press('s');
+  await page.getByRole('button', { name: 'View pantry' }).click();
+  const clarity = page.locator('.zone-panel.fridge .zone-clarity');
+  await expect(clarity).toHaveAttribute('value', '100');
+  await expect(clarity).toHaveJSProperty('value', 100);
+  expect(await page.locator('.zone-panel.fridge').getAttribute('style')).toBeNull();
+  expect(errors).toEqual([]);
 });
 
 test('empty and legal pages have no serious accessibility violations', async ({ page }) => {
@@ -115,7 +140,7 @@ test('app shell and local data survive offline reload', async ({ page, context }
   await page.getByLabel('Zone').selectOption('freezer');
   await page.getByRole('button', { name: 'Save item' }).click();
   await page.waitForFunction(() => Boolean(navigator.serviceWorker?.controller), null, { timeout: 10_000 });
-  await expect.poll(() => page.evaluate(() => caches.keys())).toContain('pantry-v5');
+  await expect.poll(() => page.evaluate(() => caches.keys())).toContain('pantry-v6');
   await page.reload();
   await expect(page.getByText('Frozen corn', { exact: true })).toBeVisible();
   await context.setOffline(true);

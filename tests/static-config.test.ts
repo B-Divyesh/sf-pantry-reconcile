@@ -12,6 +12,7 @@ describe('static-host response policy', () => {
   it('ships hardening headers, immutable hashed assets, and a manifest content type', () => {
     const config = JSON.parse(readFileSync(resolve(process.cwd(), 'public/staticwebapp.config.json'), 'utf8')) as StaticConfig;
     expect(config.globalHeaders['Content-Security-Policy']).toContain("frame-ancestors 'none'");
+    expect(config.globalHeaders['Content-Security-Policy']).toContain("connect-src 'self'");
     expect(config.globalHeaders['Permissions-Policy']).toContain('camera=()');
     expect(config.globalHeaders['X-Frame-Options']).toBe('DENY');
     expect(config.routes.find((route) => route.route === '/assets/*')?.headers['Cache-Control']).toBe('public, max-age=31536000, immutable');
@@ -21,8 +22,16 @@ describe('static-host response policy', () => {
 
   it('precache-discovers fingerprinted responsive artwork instead of stale public image paths', () => {
     const worker = readFileSync(resolve(process.cwd(), 'public/sw.js'), 'utf8');
-    expect(worker).toContain("const VERSION = 'pantry-v5'");
+    expect(worker).toContain("const VERSION = 'pantry-v6'");
     expect(worker).toContain('src|href|srcset');
     expect(worker).not.toContain('/images/pantry-landscape');
+  });
+
+  it('does not ship a checkout or license-verification integration without an enabled billing product', () => {
+    const app = readFileSync(resolve(process.cwd(), 'src/main.ts'), 'utf8');
+    expect(app).not.toContain('api.sociobot.in');
+    expect(app).not.toContain('/checkout');
+    expect(app).not.toContain('sb_license:');
+    expect(app).not.toContain('style="');
   });
 });

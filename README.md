@@ -12,7 +12,7 @@ Live product: <https://pantry-reconcile.sociobot.in>
 - Builds a shareable or CSV shopping delta and returns restocked items to inventory.
 - Creates password-protected AES-GCM backups for moving household data between devices.
 - Installs as a PWA and reloads the app shell and local data offline.
-- Offers a ₹799 one-time Household Plus license through the Sociobot billing API. The free tier retains reconciliation, exports, safety language, and accessibility.
+- Keeps every current feature available without an account, purchase, or subscription.
 
 Expiry status is a household reminder, not food-safety advice or a guarantee that an item is safe to consume.
 
@@ -21,11 +21,11 @@ Expiry status is a household reminder, not food-safety advice or a guarantee tha
 Requirements: Node.js 20+ and npm.
 
 ```bash
-npm install
+npm ci
 npm run dev
 ```
 
-Open the local URL printed by Vite. No environment variables are required for the free application. The factory must register `pantry-reconcile` with Sociobot billing before paid checkout can complete.
+Open the local URL printed by Vite. No environment variables are required.
 
 ## Test and build
 
@@ -40,7 +40,7 @@ npm run test:e2e
 
 ## Data and privacy
 
-Pantry contents and history stay in the browser. Normal use makes no application API requests. A stored license token is sent to the Sociobot verification endpoint at most once per day; checkout happens on Sociobot/Dodo. See [`/privacy`](https://pantry-reconcile.sociobot.in/privacy) and [`/terms`](https://pantry-reconcile.sociobot.in/terms).
+Pantry contents and history stay in the browser. Normal use makes no application API requests, analytics calls, or checkout requests. See [`/privacy`](https://pantry-reconcile.sociobot.in/privacy) and [`/terms`](https://pantry-reconcile.sociobot.in/terms).
 
 Generated image provenance, palette, type, spacing, and motion decisions are recorded in [`.factory/design.md`](.factory/design.md). The original prompt and source are in `assets/src/`.
 

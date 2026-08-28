@@ -18,7 +18,6 @@ let search = '';
 let installPrompt: InstallEvent | null = null;
 let undoState: { item: PantryItem; label: string } | null = null;
 let updateWorker: ServiceWorker | null = null;
-let licensed = false;
 
 const escapeHtml = (value: string) => value.replace(/[&<>'"]/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' })[character]!);
 const formatDate = (value: number) => new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(value);
@@ -61,6 +60,10 @@ function emptyHome(): string {
   return `<section class="hero empty-hero"><div class="hero-copy"><p class="eyebrow">A calmer shared kitchen</p><h2>Know what’s there.<br><em>Without tracking every bite.</em></h2><p>Take a two-minute confidence pass through the fridge, freezer, and pantry. No account, barcode ritual, or perfect counts.</p><div class="hero-actions"><button class="primary add-button">Add your first item</button><button class="secondary template-preview">See how a check works</button></div><ul class="proof-list" aria-label="Product benefits"><li>Works offline</li><li>Lives on this device</li><li>Built for quick checks</li></ul></div><picture class="hero-art"><source media="(max-width: 700px)" srcset="${pantryLandscapeMobile}"><img src="${pantryLandscapeDesktop}" width="1200" height="800" alt="Three luminous glass pantry shelves progress from hazy amber to clear mint, representing growing stock confidence." fetchpriority="high" decoding="async"></picture></section>`;
 }
 
+function zoneClarity(zoneItems: PantryItem[], uncertain: number): number {
+  return zoneItems.length ? Math.round((zoneItems.length - uncertain) / zoneItems.length * 100) : 100;
+}
+
 function homeView(): string {
   const active = items.filter((item) => item.status === 'active');
   if (!active.length) return emptyHome();
@@ -68,7 +71,7 @@ function homeView(): string {
   const review = queue.filter((item) => confidence(item) !== 'fresh');
   const filtered = active.filter((item) => item.name.toLocaleLowerCase().includes(search.toLocaleLowerCase()));
   return `<section class="dashboard-head"><div><p class="eyebrow">Household confidence</p><h2>${review.length ? `${review.length} item${review.length === 1 ? '' : 's'} worth a look` : 'Everything feels current'}</h2><p>${review.length ? 'Oldest and unconfirmed items are ready for a quick pass.' : 'No detailed stocktake needed today.'}</p></div><button class="primary start-check">${icon('check')}Start a check</button></section>
-  <section class="zone-landscape" aria-label="Pantry zones">${ZONES.map((zone) => { const zoneItems = active.filter((item) => item.zone === zone); const uncertain = zoneItems.filter((item) => confidence(item) !== 'fresh').length; return `<button class="zone-panel ${zone}" data-zone="${zone}"><span>${ZONE_LABELS[zone]}</span><strong>${zoneItems.length}</strong><small>${uncertain ? `${uncertain} to check` : 'Looking clear'}</small><i style="--clarity:${zoneItems.length ? Math.round((zoneItems.length - uncertain) / zoneItems.length * 100) : 100}%"></i></button>`; }).join('')}</section>
+  <section class="zone-landscape" aria-label="Pantry zones">${ZONES.map((zone) => { const zoneItems = active.filter((item) => item.zone === zone); const uncertain = zoneItems.filter((item) => confidence(item) !== 'fresh').length; const clarity = zoneClarity(zoneItems, uncertain); return `<button class="zone-panel ${zone}" data-zone="${zone}"><span>${ZONE_LABELS[zone]}</span><strong>${zoneItems.length}</strong><small>${uncertain ? `${uncertain} to check` : 'Looking clear'}</small><progress class="zone-clarity" value="${clarity}" max="100" aria-label="${ZONE_LABELS[zone]} confidence: ${clarity}%">${clarity}%</progress></button>`; }).join('')}</section>
   <section class="inventory-section"><div class="section-heading"><div><p class="eyebrow">Current landscape</p><h2>Your items</h2></div><label class="search-label"><span class="sr-only">Search items</span><input type="search" class="search-input" value="${escapeHtml(search)}" placeholder="Search your pantry"></label></div>${filtered.length ? `<ul class="item-list">${filtered.map(itemRow).join('')}</ul>` : `<div class="inline-empty"><p>No items match “${escapeHtml(search)}”.</p><button class="ghost clear-search">Clear search</button></div>`}</section>`;
 }
 
@@ -88,8 +91,8 @@ function shoppingView(): string {
 }
 
 function settingsView(): string {
-  const recent = [...events].sort((a, b) => b.at - a.at).slice(0, licensed ? 50 : 5);
-  return `<section class="settings-head"><p class="eyebrow">Local-first controls</p><h2>Settings & ownership</h2><p>No household account is required. Back up or move your data when you choose.</p></section><div class="settings-grid"><section class="settings-block"><span class="settings-icon">${icon('lock')}</span><h3>Encrypted household transfer</h3><p>Create a password-protected backup. The passphrase never leaves this device and cannot be recovered.</p><form class="export-form"><label for="export-pass">Backup passphrase <span>8+ characters</span></label><input id="export-pass" type="password" minlength="8" autocomplete="new-password" required><button class="primary">Download encrypted backup</button></form><hr><form class="import-form"><label for="import-file">Restore encrypted backup</label><input id="import-file" type="file" accept=".pantry,application/json" required><label for="import-pass">Backup passphrase</label><input id="import-pass" type="password" minlength="8" autocomplete="current-password" required><button class="secondary">Restore and replace local data</button><p class="form-error" role="alert"></p></form></section><section class="settings-block paid-block"><div class="paid-label">One-time unlock</div><h3>${licensed ? 'Household Plus is active' : 'Household Plus'}</h3><p>₹799 once. Unlock one-tap starter templates and your full local activity timeline. Core checking, safety notes, and every export remain free.</p>${licensed ? `<button class="secondary add-template">Add weeknight basics</button>` : `<a class="primary button-link" href="https://api.sociobot.in/api/v1/products/pantry-reconcile/checkout">Buy once for ₹799</a><form class="license-form"><label for="license-token">Have a license? Paste it here</label><div class="inline-form"><input id="license-token" autocomplete="off" spellcheck="false" required><button class="secondary">Verify</button></div><p class="form-error" role="alert"></p></form>`}<p class="fine-print">Secure checkout and refunds are handled by Sociobot/Dodo, the merchant of record. <a href="/terms">Terms apply.</a></p></section></div><section class="history-section"><div class="section-heading"><div><p class="eyebrow">On this device</p><h2>Recent activity</h2></div>${!licensed && events.length > 5 ? '<span class="paid-label">Latest 5 on free</span>' : ''}</div>${recent.length ? `<ol class="history-list">${recent.map((event) => `<li><span>${actionLabel[event.action]} <strong>${escapeHtml(event.itemName)}</strong></span><time datetime="${new Date(event.at).toISOString()}">${formatDate(event.at)}</time></li>`).join('')}</ol>` : '<p class="inline-empty">Your checks will appear here.</p>'}</section>`;
+  const recent = [...events].sort((a, b) => b.at - a.at);
+  return `<section class="settings-head"><p class="eyebrow">Local-first controls</p><h2>Settings & ownership</h2><p>No household account is required. Back up or move your data when you choose.</p></section><div class="settings-grid"><section class="settings-block"><span class="settings-icon">${icon('lock')}</span><h3>Encrypted household transfer</h3><p>Create a password-protected backup. The passphrase never leaves this device and cannot be recovered.</p><form class="export-form"><label for="export-pass">Backup passphrase <span>8+ characters</span></label><input id="export-pass" type="password" minlength="8" autocomplete="new-password" required><button class="primary">Download encrypted backup</button></form><hr><form class="import-form"><label for="import-file">Restore encrypted backup</label><input id="import-file" type="file" accept=".pantry,application/json" required><label for="import-pass">Backup passphrase</label><input id="import-pass" type="password" minlength="8" autocomplete="current-password" required><button class="secondary">Restore and replace local data</button><p class="form-error" role="alert"></p></form></section></div><section class="history-section"><div class="section-heading"><div><p class="eyebrow">On this device</p><h2>Recent activity</h2></div></div>${recent.length ? `<ol class="history-list">${recent.map((event) => `<li><span>${actionLabel[event.action]} <strong>${escapeHtml(event.itemName)}</strong></span><time datetime="${new Date(event.at).toISOString()}">${formatDate(event.at)}</time></li>`).join('')}</ol>` : '<p class="inline-empty">Your checks will appear here.</p>'}</section>`;
 }
 
 function itemDialog(): string {
@@ -97,8 +100,8 @@ function itemDialog(): string {
 }
 
 function legalPage(kind: 'privacy' | 'terms'): void {
-  const privacy = `<p class="eyebrow">Effective 28 August 2026</p><h2>Privacy, in plain language</h2><p>Pantry Check is built to work without an account. Pantry names, notes, activity, and shopping changes are stored in IndexedDB on this device.</p><h3>What leaves your device</h3><p>Nothing during normal pantry use. If you buy Household Plus, the license token is sent to Sociobot only to verify it. Checkout is hosted by Sociobot/Dodo, the merchant of record, under their own privacy terms.</p><h3>Your choices</h3><p>You can export an encrypted backup, export a shopping CSV, or clear site data in your browser. Shared text and downloaded files go only where you choose to send them.</p><h3>Analytics and safety</h3><p>There are no advertising cookies, behavioral analytics, or third-party scripts. Expiry prompts are advisory and are not a food-safety guarantee.</p>`;
-  const terms = `<p class="eyebrow">Effective 28 August 2026</p><h2>Terms of use</h2><p>Pantry Check is a household planning utility. It does not determine whether food is safe to eat. Follow product labels and local food-safety advice, and use your own judgement.</p><h3>Your data and responsibility</h3><p>Your local pantry data belongs to you. Keep your backup passphrase safe: Pantry Check cannot recover it. You are responsible for reviewing imported data and shared shopping lists.</p><h3>Household Plus</h3><p>Household Plus is a ₹799 one-time license for the features described before checkout. Sociobot/Dodo is the merchant of record and handles payment and refunds. A refunded, revoked, or wrong-product license stops unlocking paid features; free features and exports continue to work.</p><h3>Availability</h3><p>The software is provided as-is under the MIT License. Offline behavior depends on a successful first load and browser support. We may update these terms when the product changes.</p>`;
+  const privacy = `<p class="eyebrow">Effective 28 August 2026</p><h2>Privacy, in plain language</h2><p>Pantry Check is built to work without an account. Pantry names, notes, activity, and shopping changes are stored in IndexedDB on this device.</p><h3>What leaves your device</h3><p>Nothing during normal pantry use. The app does not include analytics, advertising, remote fonts, or checkout requests.</p><h3>Your choices</h3><p>You can export an encrypted backup, export a shopping CSV, or clear site data in your browser. Shared text and downloaded files go only where you choose to send them.</p><h3>Analytics and safety</h3><p>There are no advertising cookies, behavioral analytics, or third-party scripts. Expiry prompts are advisory and are not a food-safety guarantee.</p>`;
+  const terms = `<p class="eyebrow">Effective 28 August 2026</p><h2>Terms of use</h2><p>Pantry Check is a household planning utility. It does not determine whether food is safe to eat. Follow product labels and local food-safety advice, and use your own judgement.</p><h3>Your data and responsibility</h3><p>Your local pantry data belongs to you. Keep your backup passphrase safe: Pantry Check cannot recover it. You are responsible for reviewing imported data and shared shopping lists.</p><h3>Availability</h3><p>Pantry Check does not currently offer purchases or paid licenses. The software is provided as-is under the MIT License. Offline behavior depends on a successful first load and browser support. We may update these terms when the product changes.</p>`;
   document.title = `${kind === 'privacy' ? 'Privacy' : 'Terms'} — Pantry Check`;
   app.innerHTML = `<header class="topbar legal-topbar"><a class="brand" href="/"><span class="brand-mark">${icon('check')}</span><h1>Pantry Check</h1></a><a class="secondary button-link" href="/">Back to app</a></header><main id="main" class="legal-page"><article><p class="legal-kicker">${kind === 'privacy' ? 'Privacy policy' : 'Terms'}</p>${kind === 'privacy' ? privacy : terms}<p>Questions? <a href="mailto:hello@sociobot.in">hello@sociobot.in</a></p></article></main><footer><p>Pantry Check · a Param Factory product</p><div><a href="/privacy">Privacy</a><a href="/terms">Terms</a></div></footer>`;
 }
@@ -261,8 +264,6 @@ function bindSettings(): void {
     if (!file) return;
     try { const backup = await decryptBackup(await file.text(), passphrase); if (!confirm(`Replace this device's pantry with ${backup.items.length} items from the backup?`)) return; await replaceBackup(backup); items = backup.items; events = backup.events; render(); showToast('Encrypted backup restored.'); } catch (caught) { error.textContent = caught instanceof Error ? caught.message : 'Could not restore this backup.'; }
   });
-  document.querySelector<HTMLFormElement>('.license-form')?.addEventListener('submit', async (event) => { event.preventDefault(); const form = event.currentTarget as HTMLFormElement; const token = (form.elements.namedItem('license-token') as HTMLInputElement).value.trim(); localStorage.setItem('sb_license:pantry-reconcile', token); const valid = await verifyLicense(token, true); form.querySelector<HTMLElement>('.form-error')!.textContent = valid ? '' : 'That license could not be verified.'; if (valid) { licensed = true; render(); showToast('Household Plus unlocked.'); } });
-  document.querySelector('.add-template')?.addEventListener('click', () => void addTemplate());
 }
 
 function bindSwipe(): void {
@@ -270,26 +271,6 @@ function bindSwipe(): void {
   let startX = 0, startY = 0;
   card.addEventListener('pointerdown', (event) => { startX = event.clientX; startY = event.clientY; card.setPointerCapture(event.pointerId); });
   card.addEventListener('pointerup', (event) => { const dx = event.clientX - startX; const dy = event.clientY - startY; if (Math.abs(dx) > 80 && Math.abs(dx) > Math.abs(dy)) void reconcile(dx > 0 ? 'seen' : 'used'); else if (dy > 80) void reconcile('expired'); });
-}
-
-async function addTemplate(): Promise<void> {
-  const template: [string, Zone, string][] = [['Milk', 'fridge', '1 carton'], ['Eggs', 'fridge', '1 box'], ['Frozen peas', 'freezer', '1 bag'], ['Bread', 'freezer', '1 loaf'], ['Pasta', 'pantry', '1 pack'], ['Tinned tomatoes', 'pantry', '2 tins']];
-  const existing = new Set(items.filter((item) => item.status === 'active').map((item) => item.name.toLowerCase()));
-  const additions = template.filter(([name]) => !existing.has(name.toLowerCase())).map(([name, zone, quantity]) => makeItem(name, zone, quantity));
-  await Promise.all(additions.map((item) => record(item, 'added'))); render(); showToast(`${additions.length} weeknight basic${additions.length === 1 ? '' : 's'} added.`);
-}
-
-async function verifyLicense(token: string, force = false): Promise<boolean> {
-  const cachedRaw = localStorage.getItem('sb_license_verdict:pantry-reconcile');
-  if (!force && cachedRaw) { try { const cached = JSON.parse(cachedRaw) as { token: string; valid: boolean; checkedAt: number }; if (cached.token === token && Date.now() - cached.checkedAt < 86_400_000) return cached.valid; } catch { /* reverify */ } }
-  if (!navigator.onLine) return cachedRaw ? Boolean((JSON.parse(cachedRaw) as { valid: boolean }).valid) : false;
-  try { const response = await fetch(`https://api.sociobot.in/api/v1/products/pantry-reconcile/verify?license=${encodeURIComponent(token)}`); const result = await response.json() as { valid: boolean }; localStorage.setItem('sb_license_verdict:pantry-reconcile', JSON.stringify({ token, valid: result.valid, checkedAt: Date.now() })); return result.valid; } catch { return cachedRaw ? Boolean((JSON.parse(cachedRaw) as { valid: boolean }).valid) : false; }
-}
-
-async function setupLicense(): Promise<void> {
-  const url = new URL(location.href); const fromCheckout = url.searchParams.get('license');
-  if (fromCheckout) { localStorage.setItem('sb_license:pantry-reconcile', fromCheckout); url.searchParams.delete('license'); history.replaceState({}, '', url); }
-  const token = localStorage.getItem('sb_license:pantry-reconcile'); if (token) { licensed = await verifyLicense(token); if (licensed) render(); }
 }
 
 function updateTransientUi(): void {
@@ -323,7 +304,7 @@ async function registerServiceWorker(): Promise<void> {
 }
 
 async function init(): Promise<void> {
-  try { [items, events] = await Promise.all([getItems(), getEvents()]); render(); await setupLicense(); void registerServiceWorker(); }
+  try { [items, events] = await Promise.all([getItems(), getEvents()]); render(); void registerServiceWorker(); }
   catch (error) {
     app.innerHTML = `<main id="main" class="fatal-error"><h1>Pantry Check could not open local storage.</h1><p>${escapeHtml(error instanceof Error ? error.message : 'Your browser blocked local storage.')}</p><p>Check private-browsing or storage settings, then reload. No data was sent anywhere.</p><button class="primary retry-storage">Try again</button></main>`;
     document.querySelector<HTMLButtonElement>('.retry-storage')?.addEventListener('click', () => location.reload());
