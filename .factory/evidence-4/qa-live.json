@@ -1,0 +1,145 @@
+{
+  "desktop": {
+    "whitespaceError": true,
+    "whitespaceFocus": true,
+    "duplicateError": true,
+    "persisted": true,
+    "noResults": true,
+    "csv": "\"Item\",\"Zone\",\"Reason\",\"Rough amount\"\n\"Milk\",\"Fridge\",\"expired\",\"half a carton\"\n\"Beans, \"\"red\"\"\",\"Pantry\",\"used\",\"two tins\"",
+    "undoVisible": true,
+    "ciphertext": true,
+    "historyBefore": 5,
+    "backRestoresPantry": true,
+    "axe": [
+      {
+        "label": "empty-home",
+        "total": 0,
+        "seriousCritical": []
+      },
+      {
+        "label": "reconcile",
+        "total": 0,
+        "seriousCritical": []
+      },
+      {
+        "label": "shopping",
+        "total": 0,
+        "seriousCritical": []
+      },
+      {
+        "label": "settings",
+        "total": 0,
+        "seriousCritical": []
+      }
+    ],
+    "errors": [],
+    "requests": [
+      "https://pantry-reconcile.sociobot.in/",
+      "https://pantry-reconcile.sociobot.in/assets/index-DtIfyofX.js",
+      "https://pantry-reconcile.sociobot.in/assets/index-BG_nJKuV.css",
+      "https://pantry-reconcile.sociobot.in/assets/inter-latin-wght-normal-Dx4kXJAl.woff2",
+      "https://pantry-reconcile.sociobot.in/assets/pantry-landscape-DzEtCSK9.webp",
+      "https://pantry-reconcile.sociobot.in/assets/fraunces-latin-wght-normal-ukD16Tqj.woff2"
+    ],
+    "crossOrigin": []
+  },
+  "mobile": {
+    "dimensions": {
+      "overflow": false,
+      "smallControls": [
+        {
+          "text": "Reset demo",
+          "width": 161,
+          "height": 36,
+          "visible": true
+        },
+        {
+          "text": "Start for real",
+          "width": 161,
+          "height": 36,
+          "visible": true
+        }
+      ],
+      "reduced": true,
+      "animation": "1e-05s",
+      "transition": "1e-05s"
+    },
+    "focus": {
+      "text": "Skip to main content",
+      "outlineWidth": "0px",
+      "outlineStyle": "solid",
+      "outlineColor": "rgb(6, 35, 29)",
+      "outline": "rgb(6, 35, 29) solid 0px"
+    },
+    "beforeReset": [
+      "demo:pantry-check"
+    ],
+    "afterReset": [
+      "demo:pantry-check"
+    ],
+    "demoBanner": true,
+    "items": [
+      {
+        "name": "Oat milk",
+        "visible": true
+      },
+      {
+        "name": "Frozen peas",
+        "visible": true
+      },
+      {
+        "name": "Red lentils",
+        "visible": true
+      },
+      {
+        "name": "Pasta",
+        "visible": false
+      }
+    ],
+    "axe": {
+      "label": "mobile-demo",
+      "total": 0,
+      "seriousCritical": []
+    },
+    "errors": []
+  },
+  "offline": {
+    "cacheNames": [
+      "pantry-v7"
+    ],
+    "sampleVisible": true,
+    "offlineNotice": true,
+    "errors": []
+  },
+  "routes": {
+    "privacy": {
+      "title": "Privacy — Pantry Check",
+      "h1": [
+        "Privacy, in plain language"
+      ],
+      "axe": {
+        "label": "privacy",
+        "total": 0,
+        "seriousCritical": []
+      }
+    },
+    "terms": {
+      "title": "Terms — Pantry Check",
+      "h1": [
+        "Terms of use"
+      ],
+      "axe": {
+        "label": "terms",
+        "total": 0,
+        "seriousCritical": []
+      }
+    },
+    "notFound": {
+      "title": "Page not found — Pantry Check",
+      "h1": [
+        "This pantry shelf is empty."
+      ],
+      "homeLink": 1
+    }
+  }
+}

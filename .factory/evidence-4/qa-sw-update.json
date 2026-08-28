@@ -1,0 +1,11 @@
+{
+  "before": [
+    "pantry-v7"
+  ],
+  "updateToast": true,
+  "after": [
+    "pantry-v7-qa-update"
+  ],
+  "oldCacheRemoved": true,
+  "errors": []
+}
