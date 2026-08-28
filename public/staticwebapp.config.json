@@ -13,6 +13,9 @@
     "X-Content-Type-Options": "nosniff",
     "X-Frame-Options": "DENY"
   },
+  "mimeTypes": {
+    ".webmanifest": "application/manifest+json"
+  },
   "routes": [
     {
       "route": "/assets/*",
