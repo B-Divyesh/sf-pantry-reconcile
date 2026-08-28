@@ -45,15 +45,12 @@ The deployment command is `npm run build`. It writes `dist/` with `dist/index.ht
 
 ## Deployment and post-deploy checks
 
-Deploy `dist/` as the static artifact through the factory static deployment configuration. After the CDN switches, verify:
+Deployed through the factory static configuration to <https://pantry-reconcile.sociobot.in> on 2026-08-28 UTC. The deployed artifact is byte-identical to local `dist/` for every deployable file (HTML, hashed JS/CSS/fonts/WebP, service worker, manifest, offline page, icons, robots, and sitemap).
 
-```bash
-/opt/fleet/lib/verify-url.sh https://pantry-reconcile.sociobot.in /work/.evidence
-curl -I https://pantry-reconcile.sociobot.in/assets/<hashed-file>
-curl -I https://pantry-reconcile.sociobot.in/manifest.webmanifest
-```
-
-Expected static headers are `Cache-Control: public, max-age=31536000, immutable` on `/assets/*`, `Content-Type: application/manifest+json` on the manifest, and the configured CSP/Permissions-Policy/frame restriction on page responses.
+- Factory `verify-url.sh`: HTTP 200, 1030 ms to network idle, no page/console errors, title/lang/main present, one h1, zero missing image alt attributes, and zero unlabelled buttons.
+- Live header checks: CSP, Permissions-Policy, `X-Frame-Options: DENY`, `nosniff`, referrer policy, and HSTS are present. A hashed asset returns `Cache-Control: public, max-age=31536000, immutable`; the manifest returns `Content-Type: application/manifest+json` and `Cache-Control: public, max-age=300`.
+- Live normal-use privacy check at 390 px: the only request origin was `https://pantry-reconcile.sociobot.in`; no console or page errors occurred while saving a local item.
+- Lighthouse 12.8.2 against the live URL: Performance 96, Accessibility 100, Best Practices 100, SEO 100; LCP 2.5 s, TBT 0 ms, CLS 0.056. Lighthouse emitted a browser-shutdown/BFCache warning after writing the complete JSON report; category scores and audit results were present.
 
 ## Known gaps / next step
 
