@@ -1,5 +1,7 @@
 import './styles.css';
-import { ageLabel, confidence, makeId, makeItem, reconcileQueue, shoppingDelta, ZONE_LABELS, ZONES, type Action, type PantryBackup, type PantryEvent, type PantryItem, type Zone } from './domain';
+import pantryLandscapeDesktop from './images/pantry-landscape.webp';
+import pantryLandscapeMobile from './images/pantry-landscape-720.webp';
+import { ageLabel, confidence, hasActiveNameConflict, makeId, makeItem, reconcileQueue, shoppingDelta, ZONE_LABELS, ZONES, type Action, type PantryBackup, type PantryEvent, type PantryItem, type Zone } from './domain';
 import { decryptBackup, encryptBackup } from './crypto';
 import { getEvents, getItems, removeItem, replaceBackup, saveEvent, saveItem } from './storage';
 
@@ -56,7 +58,7 @@ function itemRow(item: PantryItem): string {
 }
 
 function emptyHome(): string {
-  return `<section class="hero empty-hero"><div class="hero-copy"><p class="eyebrow">A calmer shared kitchen</p><h2>Know what’s there.<br><em>Without tracking every bite.</em></h2><p>Take a two-minute confidence pass through the fridge, freezer, and pantry. No account, barcode ritual, or perfect counts.</p><div class="hero-actions"><button class="primary add-button">Add your first item</button><button class="secondary template-preview">See how a check works</button></div><ul class="proof-list" aria-label="Product benefits"><li>Works offline</li><li>Lives on this device</li><li>Built for quick checks</li></ul></div><picture class="hero-art"><source media="(max-width: 700px)" srcset="/images/pantry-landscape-720.webp"><img src="/images/pantry-landscape.webp" width="1200" height="800" alt="Three luminous glass pantry shelves progress from hazy amber to clear mint, representing growing stock confidence." fetchpriority="high" decoding="async"></picture></section>`;
+  return `<section class="hero empty-hero"><div class="hero-copy"><p class="eyebrow">A calmer shared kitchen</p><h2>Know what’s there.<br><em>Without tracking every bite.</em></h2><p>Take a two-minute confidence pass through the fridge, freezer, and pantry. No account, barcode ritual, or perfect counts.</p><div class="hero-actions"><button class="primary add-button">Add your first item</button><button class="secondary template-preview">See how a check works</button></div><ul class="proof-list" aria-label="Product benefits"><li>Works offline</li><li>Lives on this device</li><li>Built for quick checks</li></ul></div><picture class="hero-art"><source media="(max-width: 700px)" srcset="${pantryLandscapeMobile}"><img src="${pantryLandscapeDesktop}" width="1200" height="800" alt="Three luminous glass pantry shelves progress from hazy amber to clear mint, representing growing stock confidence." fetchpriority="high" decoding="async"></picture></section>`;
 }
 
 function homeView(): string {
@@ -76,7 +78,7 @@ function reconcileView(): string {
   if (!items.some((item) => item.status === 'active')) return `<section class="focused-empty"><span class="orb">${icon('check')}</span><p class="eyebrow">Nothing to check yet</p><h2>Add what you usually keep around.</h2><p>Exact counts are optional. A name and zone are enough to begin.</p><button class="primary add-button">Add an item</button></section>`;
   if (!current) return `<section class="focused-empty complete"><span class="orb">${icon('spark')}</span><p class="eyebrow">Pass complete</p><h2>${completedThisPass ? `${completedThisPass} confirmation${completedThisPass === 1 ? '' : 's'} made.` : 'Your pantry is current.'}</h2><p>Your confidence ages naturally from here. Come back when real life makes the picture fuzzy.</p><div class="button-row"><button class="primary" data-view="home">View pantry</button><button class="secondary restart-check">Check again</button></div></section>`;
   const progress = completedThisPass + queue.length;
-  return `<section class="reconcile-shell"><div class="reconcile-top"><div><p class="eyebrow">Quick check · uncertainty first</p><h2>What do you see?</h2></div><div class="progress-text"><strong>${completedThisPass + 1}</strong> of ${progress}</div></div><div class="progress-track" aria-label="Check progress"><i style="width:${progress ? completedThisPass / progress * 100 : 100}%"></i></div><article class="check-card ${current.zone}" data-id="${current.id}" tabindex="0" aria-label="Checking ${escapeHtml(current.name)}"><div class="shelf-glow"></div><span class="zone-label">${ZONE_LABELS[current.zone]}</span><div><h3>${escapeHtml(current.name)}</h3>${current.quantity ? `<p class="quantity">${escapeHtml(current.quantity)}</p>` : ''}<p>${ageLabel(current.lastConfirmedAt)}</p>${current.note ? `<p class="item-note">${escapeHtml(current.note)}</p>` : ''}</div><p class="swipe-hint">Swipe right for seen, left for used, down for expired</p></article><div class="reconcile-actions"><button class="action expired-action" data-action="expired"><span>↓</span>Expired<kbd>E</kbd></button><button class="action seen-action" data-action="seen"><span>✓</span>Seen<kbd>S</kbd></button><button class="action used-action" data-action="used"><span>←</span>Used up<kbd>U</kbd></button></div><p class="safety-note"><strong>Use your judgement.</strong> “Expired” is a household note, not a food-safety assessment.</p><button class="text-button end-pass" data-view="home">Finish for now</button></section>`;
+  return `<section class="reconcile-shell"><div class="reconcile-top"><div><p class="eyebrow">Quick check · uncertainty first</p><h2>What do you see?</h2></div><div class="progress-text"><strong>${completedThisPass + 1}</strong> of ${progress}</div></div><progress class="progress-track" aria-label="Check progress" value="${completedThisPass}" max="${progress}">${completedThisPass} of ${progress} checked</progress><article class="check-card ${current.zone}" data-id="${current.id}" tabindex="0" aria-label="Checking ${escapeHtml(current.name)}"><div class="shelf-glow"></div><span class="zone-label">${ZONE_LABELS[current.zone]}</span><div><h3>${escapeHtml(current.name)}</h3>${current.quantity ? `<p class="quantity">${escapeHtml(current.quantity)}</p>` : ''}<p>${ageLabel(current.lastConfirmedAt)}</p>${current.note ? `<p class="item-note">${escapeHtml(current.note)}</p>` : ''}</div><p class="swipe-hint">Swipe right for seen, left for used, down for expired</p></article><div class="reconcile-actions"><button class="action expired-action" data-action="expired"><span>↓</span>Expired<kbd>E</kbd></button><button class="action seen-action" data-action="seen"><span>✓</span>Seen<kbd>S</kbd></button><button class="action used-action" data-action="used"><span>←</span>Used up<kbd>U</kbd></button></div><p class="safety-note"><strong>Use your judgement.</strong> “Expired” is a household note, not a food-safety assessment.</p><button class="text-button end-pass" data-view="home">Finish for now</button></section>`;
 }
 
 function shoppingView(): string {
@@ -213,9 +215,11 @@ function bindDialog(): void {
     const data = new FormData(form);
     const id = String(data.get('id') ?? '');
     const existing = items.find((item) => item.id === id);
+    const nameInput = form.elements.namedItem('name') as HTMLInputElement;
     const name = String(data.get('name') ?? '').trim();
     const error = form.querySelector<HTMLElement>('.form-error')!;
-    if (items.some((item) => item.status === 'active' && item.id !== id && item.name.toLowerCase() === name.toLowerCase())) { error.textContent = 'That active item is already in your pantry. Edit it instead.'; return; }
+    if (!name) { error.textContent = 'Enter an item name, not only spaces.'; nameInput.focus(); return; }
+    if (hasActiveNameConflict(items, name, id || undefined)) { error.textContent = 'That active item is already in your pantry. Edit it instead.'; nameInput.focus(); return; }
     const item = existing ? { ...existing, name, zone: data.get('zone') as Zone, quantity: String(data.get('quantity') ?? '').trim(), note: String(data.get('note') ?? '').trim(), updatedAt: Date.now() } : makeItem(name, data.get('zone') as Zone, String(data.get('quantity') ?? ''), String(data.get('note') ?? ''));
     try { await record(item, existing ? 'edited' : 'added'); dialog.close(); render(); showToast(`${item.name} saved.`); } catch (caught) { error.textContent = caught instanceof Error ? caught.message : 'Could not save this item.'; }
   });
@@ -230,6 +234,10 @@ function bindDialog(): void {
 function bindShopping(): void {
   document.querySelectorAll<HTMLButtonElement>('.restock-item').forEach((button) => button.addEventListener('click', async () => {
     const item = items.find((entry) => entry.id === button.dataset.id); if (!item) return;
+    if (hasActiveNameConflict(items, item.name, item.id)) {
+      const message = `${item.name} is already active in your pantry. Edit that record instead of restocking this one.`;
+      showToast(message); announce(message); return;
+    }
     undoState = { item: { ...item }, label: item.name };
     await record({ ...item, status: 'active', lastConfirmedAt: Date.now(), updatedAt: Date.now() }, 'restocked'); render(); showToast(`${item.name} returned to ${ZONE_LABELS[item.zone]}.`, true);
   }));
@@ -316,7 +324,10 @@ async function registerServiceWorker(): Promise<void> {
 
 async function init(): Promise<void> {
   try { [items, events] = await Promise.all([getItems(), getEvents()]); render(); await setupLicense(); void registerServiceWorker(); }
-  catch (error) { app.innerHTML = `<main id="main" class="fatal-error"><h1>Pantry Check could not open local storage.</h1><p>${escapeHtml(error instanceof Error ? error.message : 'Your browser blocked local storage.')}</p><p>Check private-browsing or storage settings, then reload. No data was sent anywhere.</p><button class="primary" onclick="location.reload()">Try again</button></main>`; }
+  catch (error) {
+    app.innerHTML = `<main id="main" class="fatal-error"><h1>Pantry Check could not open local storage.</h1><p>${escapeHtml(error instanceof Error ? error.message : 'Your browser blocked local storage.')}</p><p>Check private-browsing or storage settings, then reload. No data was sent anywhere.</p><button class="primary retry-storage">Try again</button></main>`;
+    document.querySelector<HTMLButtonElement>('.retry-storage')?.addEventListener('click', () => location.reload());
+  }
 }
 
 void init();

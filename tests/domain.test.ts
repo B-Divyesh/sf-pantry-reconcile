@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ageLabel, confidence, makeItem, reconcileQueue, shoppingDelta } from '../src/domain';
+import { ageLabel, confidence, hasActiveNameConflict, makeItem, reconcileQueue, shoppingDelta } from '../src/domain';
 
 const DAY = 86_400_000;
 
@@ -30,5 +30,13 @@ describe('pantry confidence', () => {
     const used = { ...makeItem('Milk', 'fridge'), status: 'used' as const };
     const expired = { ...makeItem('Peas', 'freezer'), status: 'expired' as const };
     expect(shoppingDelta([active, used, expired]).map((item) => item.name).sort()).toEqual(['Milk', 'Peas']);
+  });
+
+  it('treats trimmed, case-insensitive active names as conflicts, including a restock candidate', () => {
+    const active = makeItem('Pasta', 'pantry');
+    const used = { ...makeItem(' pasta ', 'pantry'), status: 'used' as const };
+    expect(hasActiveNameConflict([active, used], '  PASTA  ', used.id)).toBe(true);
+    expect(hasActiveNameConflict([active], '   ')).toBe(false);
+    expect(hasActiveNameConflict([used], 'pasta', used.id)).toBe(false);
   });
 });

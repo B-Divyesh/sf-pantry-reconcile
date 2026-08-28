@@ -33,6 +33,20 @@ export const ZONES: Zone[] = ['fridge', 'freezer', 'pantry'];
 export const ZONE_LABELS: Record<Zone, string> = { fridge: 'Fridge', freezer: 'Freezer', pantry: 'Pantry' };
 export const REVIEW_AFTER_DAYS: Record<Zone, number> = { fridge: 5, freezer: 21, pantry: 30 };
 
+/**
+ * Names are compared the way a household reads a label: surrounding space and
+ * letter case do not make a different pantry record. Keeping this rule here
+ * lets every path that creates an active record use the same invariant.
+ */
+export function normalizeItemName(name: string): string {
+  return name.trim().toLocaleLowerCase();
+}
+
+export function hasActiveNameConflict(items: PantryItem[], name: string, excludingId?: string): boolean {
+  const normalized = normalizeItemName(name);
+  return normalized.length > 0 && items.some((item) => item.status === 'active' && item.id !== excludingId && normalizeItemName(item.name) === normalized);
+}
+
 export function ageInDays(timestamp: number | null, now = Date.now()): number | null {
   return timestamp === null ? null : Math.max(0, Math.floor((now - timestamp) / 86_400_000));
 }

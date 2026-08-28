@@ -53,7 +53,7 @@ UI transitions take 180–260ms and only animate transform and opacity. The acti
 
 ## Original asset plan and provenance
 
-- `public/images/pantry-landscape.webp` and `.avif`: original AI-generated abstract kitchen still life, used as a meaningful visual explanation of zones and uncertainty. It is reviewed for stray text, brands, visual seams, or misleading capabilities and exported at explicit dimensions; mobile payload stays below 300 KB.
+- `src/images/pantry-landscape*.webp`: original AI-generated abstract kitchen still life, used as a meaningful visual explanation of zones and uncertainty. Vite fingerprints the shipped variants for immutable caching. It is reviewed for stray text, brands, visual seams, or misleading capabilities and exported at explicit dimensions; mobile payload stays below 300 KB.
 - App icons and UI symbols are hand-authored SVGs/CSS by the project; no icon library or third-party runtime assets.
 - Generation model: Azure OpenAI factory deployment `factory-image` via `/opt/fleet/lib/gen-image.sh`.
 - Generation date: 2026-08-28.

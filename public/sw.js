@@ -1,5 +1,5 @@
-const VERSION = 'pantry-v4';
-const SHELL = ['/offline.html', '/manifest.webmanifest', '/icons/icon.svg', '/icons/icon-192.png', '/icons/icon-512.png', '/images/pantry-landscape.webp', '/images/pantry-landscape-720.webp'];
+const VERSION = 'pantry-v5';
+const SHELL = ['/offline.html', '/manifest.webmanifest', '/icons/icon.svg', '/icons/icon-192.png', '/icons/icon-512.png'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil((async () => {
@@ -8,7 +8,7 @@ self.addEventListener('install', (event) => {
     const root = await fetch('/', { cache: 'reload' });
     const html = await root.clone().text();
     await cache.put('/', root);
-    const appAssets = [...html.matchAll(/(?:src|href)="(\/assets\/[^"]+)"/g)].map((match) => match[1]);
+    const appAssets = [...html.matchAll(/(?:src|href|srcset)="(\/assets\/[^"]+)"/g)].map((match) => match[1]);
     await cache.addAll(appAssets);
   })());
 });

@@ -31,6 +31,7 @@ Open the local URL printed by Vite. No environment variables are required for th
 
 ```bash
 npm test
+npm run lint
 npm run build
 npm run test:e2e
 ```
@@ -45,7 +46,7 @@ Generated image provenance, palette, type, spacing, and motion decisions are rec
 
 ## Deploy
 
-Publish `dist/` as a static site and route extensionless paths such as `/privacy` and `/terms` to `index.html`. Do not deploy `assets/src/`; it contains production-source artwork only. The service worker controls the root scope and updates via an in-app reload prompt.
+Publish `dist/` as a static site and route extensionless paths such as `/privacy` and `/terms` to `index.html`. `public/staticwebapp.config.json` is copied into `dist/` and provides the required CSP, feature policy, manifest MIME type, and immutable cache policy for Vite-fingerprinted assets. Do not deploy `assets/src/`; it contains production-source artwork only. The service worker controls the root scope and updates via an in-app reload prompt.
 
 ## License
 

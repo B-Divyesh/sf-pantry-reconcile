@@ -42,6 +42,61 @@ test('used items become a restockable shopping delta', async ({ page }) => {
   await expect(page.getByText('Nothing to replace.')).toBeVisible();
 });
 
+test('rejects whitespace-only names and keeps focus on the item name', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Add item' }).click();
+  const name = page.getByLabel('Item name');
+  await name.fill('   ');
+  await page.getByRole('button', { name: 'Save item' }).click();
+  await expect(page.getByText('Enter an item name, not only spaces.')).toBeVisible();
+  await expect(name).toBeFocused();
+  await expect(page.locator('.item-dialog[open]')).toBeVisible();
+});
+
+test('does not restock into a case-insensitive active duplicate', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Add item' }).click();
+  await page.getByLabel('Item name').fill('Pasta');
+  await page.getByLabel('Zone').selectOption('pantry');
+  await page.getByRole('button', { name: 'Save item' }).click();
+  await page.getByRole('button', { name: 'Start a check' }).click();
+  await page.getByRole('button', { name: /Used up/ }).click();
+  await page.getByRole('button', { name: 'Pantry' }).click();
+  await page.getByRole('button', { name: 'Add item' }).click();
+  await page.getByLabel('Item name').fill(' pasta ');
+  await page.getByRole('button', { name: 'Save item' }).click();
+  await page.getByRole('button', { name: /Shopping/ }).click();
+  await page.getByRole('button', { name: 'Mark restocked' }).click();
+  await expect(page.locator('.toast')).toContainText(/already active in your pantry/i);
+  await expect(page.getByRole('button', { name: 'Mark restocked' })).toBeVisible();
+  await page.getByRole('button', { name: 'Pantry' }).click();
+  await expect(page.locator('.item-list strong')).toHaveCount(1);
+  await expect(page.locator('.item-list strong')).toHaveText('pasta');
+});
+
+test('uses a valid labelled progress element with no serious reconcile axe findings', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Add item' }).click();
+  await page.getByLabel('Item name').fill('Rice');
+  await page.getByRole('button', { name: 'Save item' }).click();
+  await page.getByRole('button', { name: 'Start a check' }).click();
+  await expect(page.getByRole('progressbar', { name: 'Check progress' })).toHaveAttribute('value', '0');
+  const results = await new AxeBuilder({ page: page as never }).analyze();
+  expect(results.violations.filter((violation) => ['serious', 'critical'].includes(violation.impact ?? ''))).toEqual([]);
+});
+
+test('keeps header and footer controls at least 44 pixels at 390px', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/');
+  for (const control of [page.locator('.topbar .add-button'), page.locator('footer a[href="/privacy"]'), page.locator('footer a[href="/terms"]')]) {
+    const box = await control.boundingBox();
+    expect(box).not.toBeNull();
+    expect(box!.width).toBeGreaterThanOrEqual(44);
+    expect(box!.height).toBeGreaterThanOrEqual(44);
+  }
+  expect(await page.locator('html').evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
+});
+
 test('empty and legal pages have no serious accessibility violations', async ({ page }) => {
   for (const path of ['/', '/privacy', '/terms']) {
     await page.goto(path);
@@ -60,6 +115,7 @@ test('app shell and local data survive offline reload', async ({ page, context }
   await page.getByLabel('Zone').selectOption('freezer');
   await page.getByRole('button', { name: 'Save item' }).click();
   await page.waitForFunction(() => Boolean(navigator.serviceWorker?.controller), null, { timeout: 10_000 });
+  await expect.poll(() => page.evaluate(() => caches.keys())).toContain('pantry-v5');
   await page.reload();
   await expect(page.getByText('Frozen corn', { exact: true })).toBeVisible();
   await context.setOffline(true);
