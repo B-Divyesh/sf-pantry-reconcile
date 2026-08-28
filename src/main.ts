@@ -91,7 +91,7 @@ function settingsView(): string {
 }
 
 function itemDialog(): string {
-  return `<dialog class="item-dialog"><form method="dialog" class="dialog-card"><div class="dialog-heading"><div><p class="eyebrow">Pantry record</p><h2 class="dialog-title">Add an item</h2></div><button class="icon-button close-dialog" value="cancel" aria-label="Close">×</button></div><input type="hidden" name="id"><label for="item-name">Item name</label><input id="item-name" name="name" required maxlength="80" autocomplete="off"><div class="field-grid"><label for="item-zone">Zone<select id="item-zone" name="zone">${ZONES.map((zone) => `<option value="${zone}">${ZONE_LABELS[zone]}</option>`).join('')}</select></label><label for="item-quantity">Rough amount <span>optional</span><input id="item-quantity" name="quantity" maxlength="40" placeholder="e.g. half a jar"></label></div><label for="item-note">Household note <span>optional</span></label><textarea id="item-note" name="note" maxlength="160" rows="3" placeholder="Top shelf, opened Tuesday…"></textarea><p class="form-error" role="alert"></p><div class="dialog-actions"><button type="button" class="danger delete-item" hidden>Remove item</button><span></span><button value="cancel" class="ghost">Cancel</button><button type="submit" value="default" class="primary save-item">Save item</button></div></form></dialog>`;
+  return `<dialog class="item-dialog"><form method="dialog" class="dialog-card"><div class="dialog-heading"><div><p class="eyebrow">Pantry record</p><h2 class="dialog-title">Add an item</h2></div><button type="button" class="icon-button close-dialog" aria-label="Close">×</button></div><input type="hidden" name="id"><label for="item-name">Item name</label><input id="item-name" name="name" required maxlength="80" autocomplete="off"><div class="field-grid"><label for="item-zone">Zone<select id="item-zone" name="zone">${ZONES.map((zone) => `<option value="${zone}">${ZONE_LABELS[zone]}</option>`).join('')}</select></label><label for="item-quantity">Rough amount <span>optional</span><input id="item-quantity" name="quantity" maxlength="40" placeholder="e.g. half a jar"></label></div><label for="item-note">Household note <span>optional</span></label><textarea id="item-note" name="note" maxlength="160" rows="3" placeholder="Top shelf, opened Tuesday…"></textarea><p class="form-error" role="alert"></p><div class="dialog-actions"><button type="button" class="danger delete-item" hidden>Remove item</button><span></span><button type="button" class="ghost cancel-dialog">Cancel</button><button type="submit" value="default" class="primary save-item">Save item</button></div></form></dialog>`;
 }
 
 function legalPage(kind: 'privacy' | 'terms'): void {
@@ -207,6 +207,7 @@ function bindDialog(): void {
   const form = dialog?.querySelector<HTMLFormElement>('form');
   if (!dialog || !form) return;
   dialog.querySelector('.close-dialog')?.addEventListener('click', () => dialog.close());
+  dialog.querySelector('.cancel-dialog')?.addEventListener('click', () => dialog.close());
   form?.addEventListener('submit', async (event) => {
     event.preventDefault();
     const data = new FormData(form);

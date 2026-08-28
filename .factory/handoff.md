@@ -1,1 +1,46 @@
-# Handoff\n\n(written by the worker at the end of each work order)
+# Pantry Check — build handoff
+
+## What shipped
+
+- A production Vite + TypeScript offline PWA for confidence-based pantry reconciliation.
+- Local IndexedDB records for zones, rough amounts, notes, confirmation age, item state, and a visible action timeline.
+- Add/edit/remove flows with duplicate validation and specific destructive confirmation.
+- Uncertainty-first reconciliation across all items or one zone, with labelled actions, S/U/E keyboard shortcuts, touch swipes, progress, completion state, and undo.
+- Shopping delta created by “used up” and “expired,” with Web Share/clipboard sharing, CSV export, and restocking.
+- Advisory expiry language in both reconcile and shopping contexts; the product makes no food-safety claim.
+- AES-256-GCM encrypted export/import using PBKDF2 (250,000 SHA-256 iterations). Import is validated and explicitly replaces local data only after confirmation.
+- One-time Household Plus UI at ₹799, production Sociobot checkout link, checkout-return license capture, daily cached verification, offline optimistic cache behavior, and paste-to-restore. Paid features are starter templates and extended local history; all core, export, safety, and accessibility features remain free.
+- PWA manifest, hand-authored maskable icons, versioned shell cache, offline navigation fallback, asset cache, and an in-app update notice.
+- Privacy and terms routes, MIT license, product README, and the product-specific design thesis.
+- Original generated pantry landscape. Source PNG, factory sidecar, review record, and prompt are under `assets/src/`; optimized WebP variants are 54 KB desktop and 23 KB mobile.
+
+## How to run and verify
+
+```bash
+npm install
+npm test
+npm run build
+npm run test:e2e
+```
+
+The required deploy command is `npm run build`; output is `dist/` and `dist/index.html` is present at its root.
+
+Verification completed 2026-08-28:
+
+- `npm test`: 5/5 unit tests passed (confidence ordering and encrypted backup round-trip/failure).
+- `npm run test:e2e`: 8/8 Playwright scenarios passed across desktop Chromium and Pixel 5 emulation.
+- Offline test: service worker acquired control, the network was disabled with `context.setOffline(true)`, the page reloaded, and stored pantry data plus the offline status remained available.
+- Axe via Playwright: no serious or critical violations on the empty app, privacy page, or terms page in desktop and mobile projects.
+- Console smoke: no console or page errors on the empty app load.
+- `npm audit --omit=dev`: 0 vulnerabilities. Full install audit was also 0 after pinned upgrades.
+- Production payload: 31.55 KB JS (11.32 KB gzip), 19.71 KB CSS (5.37 KB gzip), 84.88 KB total self-hosted variable fonts, 54 KB desktop hero / 23 KB mobile hero.
+- Lighthouse 12.8.2, mobile/default throttling after the robots/sitemap fix: Performance 99, Accessibility 100, Best Practices 100, SEO 100. Metrics: LCP 1.8 s, TBT 0 ms, CLS 0.049.
+- Factory `verify-url.sh`: HTTP 200, 773 ms network-idle load, title/lang/main present, exactly one h1, zero missing image alt attributes, zero unlabelled buttons, and zero console/page errors.
+
+## Operational notes and known gaps
+
+- The factory must register the `pantry-reconcile` paid product and confirm the ₹799 price/return URL in Sociobot before checkout can complete. No product ID or payment-provider integration is embedded.
+- Sharing between devices is deliberately manual and encrypted; there is no account or live multi-device merge. Imports use last imported state as an explicit whole-household replacement.
+- Expiry is user-declared, not calculated from a food database. This is intentional: Pantry Check avoids barcode/catalog dependence and does not provide food-safety advice.
+- Static hosting must route extensionless `/privacy` and `/terms` requests to `index.html`, as noted in the README.
+- No analytics or page-count integration was added; there are no tracking requests.

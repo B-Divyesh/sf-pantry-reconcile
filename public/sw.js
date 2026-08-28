@@ -1,4 +1,4 @@
-const VERSION = 'pantry-v3';
+const VERSION = 'pantry-v4';
 const SHELL = ['/offline.html', '/manifest.webmanifest', '/icons/icon.svg', '/icons/icon-192.png', '/icons/icon-512.png', '/images/pantry-landscape.webp', '/images/pantry-landscape-720.webp'];
 
 self.addEventListener('install', (event) => {

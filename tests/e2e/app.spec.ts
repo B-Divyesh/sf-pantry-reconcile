@@ -13,6 +13,10 @@ test('adds, reconciles, and persists an item', async ({ page }) => {
   await page.getByLabel('Rough amount').fill('half a carton');
   await page.getByRole('button', { name: 'Save item' }).click();
   await expect(page.getByText('Oat milk', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Add item' }).click();
+  await page.getByLabel('Item name').fill('Do not save');
+  await page.getByRole('button', { name: 'Cancel' }).click();
+  await expect(page.getByText('Do not save', { exact: true })).toHaveCount(0);
   await page.getByRole('button', { name: 'Start a check' }).click();
   await expect(page.locator('.check-card')).toContainText('Oat milk');
   await page.keyboard.press('s');
