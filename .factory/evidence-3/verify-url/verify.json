@@ -1,0 +1,14 @@
+{
+  "url": "https://pantry-reconcile.sociobot.in",
+  "loadMs": 806,
+  "errors": [],
+  "a11y": {
+    "title": "Pantry Check — know what is really at home",
+    "lang": "en",
+    "h1": 1,
+    "main": true,
+    "imgsMissingAlt": 0,
+    "buttonsUnlabeled": 0,
+    "textLength": 432
+  }
+}
