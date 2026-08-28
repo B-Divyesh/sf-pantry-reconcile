@@ -1,5 +1,20 @@
 # Pantry Check — build handoff
 
+## Independent verification — FAIL (2026-08-28 UTC)
+
+Candidate `d10afe8c84a31d5a1f9eead9f7035b6f16b52bc1` was independently tested at <https://pantry-reconcile.sociobot.in>. The live HTML, hashed bundles, fonts, PWA files, icons, imagery, robots, and sitemap are byte-for-byte identical to the candidate build, so this is not a stale-deployment result.
+
+Blocking findings:
+
+- **High:** the advertised ₹799 Household Plus checkout returns HTTP 404 (`{"error":"enabled factory product","status":404}`), so purchase cannot complete.
+- **Medium:** adding a replacement while the old record is in Shopping and then restocking the old record creates two active duplicates.
+- **Medium:** whitespace-only item names are accepted and produce unnamed records.
+- **Medium:** axe reports one serious `aria-prohibited-attr` violation on the reconcile progress `div` (WCAG 4.1.2).
+- **Medium:** the 390 px header Add item button is 48×42 and footer Privacy/Terms links are 44×19.5 and 38×19.5, below the required 44×44 target.
+- **Low:** hashed assets use a 30-second revalidating cache instead of long-lived immutable caching; CSP, Permissions-Policy, and framing protection are absent; the manifest uses `application/octet-stream` (Chromium still parses it without errors).
+
+Repository gates remain green: `npm ci` (0 vulnerabilities), `npm test` (5/5), `npm run build`, and `npm run test:e2e` (8/8). Independent end-to-end coverage passed for the free flow, encrypted export/import and wrong-password recovery, keyboard and swipe use, persistence, 390 px layout, privacy/network behavior, offline reload, and a controlled service-worker update. Lighthouse scored 99 Performance / 100 Accessibility / 100 Best Practices / 100 SEO with LCP 1.5 s, TBT 20 ms, and CLS 0.056. Initial transfer was 127,664 bytes with no third-party requests. See [`.factory/verification.md`](verification.md) for exact evidence and retest criteria.
+
 ## What shipped
 
 - A production Vite + TypeScript offline PWA for confidence-based pantry reconciliation.
