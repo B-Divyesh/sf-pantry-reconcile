@@ -22,10 +22,10 @@
   },
   {
     "id": "csv-export",
-    "claim": "Exports the shopping change as CSV.",
+    "claim": "Exports the shopping list as CSV.",
     "where": "shopping toolbar, README",
     "test": "npm run test:e2e -- --grep @claim:csv-export",
-    "sandbox": "fresh browser context; open /demo; export its seeded shopping change; assert the downloaded header and item row"
+    "sandbox": "fresh browser context; open /demo; export its seeded shopping list; assert the downloaded header and item row"
   },
   {
     "id": "encrypted-backup",
@@ -33,5 +33,19 @@
     "where": "settings, README",
     "test": "npm run test:e2e -- --grep @claim:encrypted-backup",
     "sandbox": "fresh browser context; open /demo; download with a passphrase; assert the file excludes the sample item and passphrase plaintext"
+  },
+  {
+    "id": "passphrase-private",
+    "claim": "Pantry Check does not send or save the backup passphrase, so it cannot recover the passphrase.",
+    "where": "settings, terms",
+    "test": "npm run test:e2e -- --grep @claim:passphrase-private",
+    "sandbox": "fresh browser context; create a demo backup while recording requests; inspect localStorage, sessionStorage, and every IndexedDB store; assert the passphrase is absent"
+  },
+  {
+    "id": "update-prompt",
+    "claim": "A service-worker update appears in the app and can be installed with Reload to update.",
+    "where": "README",
+    "test": "npm run test:e2e -- --grep @claim:update-prompt",
+    "sandbox": "fresh browser context and isolated local server; install worker version one; serve version two; assert the prompt appears and activating it replaces the worker cache"
   }
 ]

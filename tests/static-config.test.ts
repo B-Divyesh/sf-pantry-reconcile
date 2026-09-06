@@ -5,7 +5,9 @@ import { describe, expect, it } from 'vitest';
 type StaticConfig = {
   globalHeaders: Record<string, string>;
   mimeTypes: Record<string, string>;
-  routes: Array<{ route: string; headers: Record<string, string> }>;
+  routes: Array<{ route: string; rewrite?: string; headers?: Record<string, string> }>;
+  navigationFallback?: unknown;
+  responseOverrides: Record<string, { rewrite: string }>;
 };
 
 describe('static-host response policy', () => {
@@ -15,14 +17,26 @@ describe('static-host response policy', () => {
     expect(config.globalHeaders['Content-Security-Policy']).toContain("connect-src 'self'");
     expect(config.globalHeaders['Permissions-Policy']).toContain('camera=()');
     expect(config.globalHeaders['X-Frame-Options']).toBe('DENY');
-    expect(config.routes.find((route) => route.route === '/assets/*')?.headers['Cache-Control']).toBe('public, max-age=31536000, immutable');
+    expect(config.routes.find((route) => route.route === '/assets/*')?.headers?.['Cache-Control']).toBe('public, max-age=31536000, immutable');
     expect(config.mimeTypes['.webmanifest']).toBe('application/manifest+json');
-    expect(config.routes.find((route) => route.route === '/manifest.webmanifest')?.headers['Content-Type']).toBe('application/manifest+json; charset=utf-8');
+    expect(config.routes.find((route) => route.route === '/manifest.webmanifest')?.headers?.['Content-Type']).toBe('application/manifest+json; charset=utf-8');
+  });
+
+  it('rewrites only real app routes and serves the designed page with a 404 status for unknown paths', () => {
+    const config = JSON.parse(readFileSync(resolve(process.cwd(), 'public/staticwebapp.config.json'), 'utf8')) as StaticConfig;
+    expect(config.navigationFallback).toBeUndefined();
+    expect(config.responseOverrides['404']).toEqual({ rewrite: '/404.html' });
+    for (const route of ['/demo', '/privacy', '/terms']) {
+      expect(config.routes.find((entry) => entry.route === route)?.rewrite).toBe('/index.html');
+    }
+    const page = readFileSync(resolve(process.cwd(), 'public/404.html'), 'utf8');
+    expect(page).toContain('<title>Page not found — Pantry Check</title>');
+    expect(page).toContain('<h1>That page does not exist.</h1>');
   });
 
   it('precache-discovers fingerprinted responsive artwork instead of stale public image paths', () => {
     const worker = readFileSync(resolve(process.cwd(), 'public/sw.js'), 'utf8');
-    expect(worker).toContain("const VERSION = 'pantry-v7'");
+    expect(worker).toContain("const VERSION = 'pantry-v8'");
     expect(worker).toContain('src|href|srcset');
     expect(worker).not.toContain('/images/pantry-landscape');
   });

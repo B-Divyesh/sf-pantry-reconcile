@@ -1,5 +1,5 @@
-const VERSION = 'pantry-v7';
-const SHELL = ['/offline.html', '/manifest.webmanifest', '/icons/icon.svg', '/icons/icon-192.png', '/icons/icon-512.png'];
+const VERSION = 'pantry-v8';
+const SHELL = ['/offline.html', '/offline.css', '/404.html', '/404.css', '/manifest.webmanifest', '/icons/icon.svg', '/icons/icon-192.png', '/icons/icon-512.png'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil((async () => {
@@ -27,8 +27,10 @@ self.addEventListener('fetch', (event) => {
   if (url.origin !== self.location.origin) return;
   if (event.request.mode === 'navigate') {
     event.respondWith(fetch(event.request).then((response) => {
-      const copy = response.clone();
-      caches.open(VERSION).then((cache) => cache.put('/', copy));
+      if (response.ok && ['/', '/demo', '/privacy', '/terms'].includes(url.pathname)) {
+        const copy = response.clone();
+        caches.open(VERSION).then((cache) => cache.put('/', copy));
+      }
       return response;
     }).catch(() => caches.match('/').then((response) => response || caches.match('/offline.html'))));
     return;

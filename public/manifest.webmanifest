@@ -1,7 +1,7 @@
 {
   "name": "Pantry Check",
   "short_name": "Pantry",
-  "description": "Quick confidence-based pantry reconciliation for shared households.",
+  "description": "Check shared pantry items without recording every meal.",
   "id": "/",
   "start_url": "/?source=installed&v=2",
   "scope": "/",
@@ -15,6 +15,6 @@
   ],
   "shortcuts": [
     { "name": "Start a pantry check", "url": "/?view=reconcile", "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }] },
-    { "name": "Shopping delta", "url": "/?view=shopping", "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }] }
+    { "name": "Shopping list", "url": "/?view=shopping", "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }] }
   ]
 }

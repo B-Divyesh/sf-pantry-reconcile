@@ -1,6 +1,6 @@
 # Pantry Check
 
-Pantry Check helps shared kitchens review what is still there. Add familiar items, run a check, and keep the shopping change small.
+Pantry Check helps shared kitchens review what is still there. Add familiar items, run a check, and keep the shopping list short.
 
 Live product: <https://pantry-reconcile.sociobot.in>
 
@@ -12,8 +12,10 @@ Open [the isolated demo](https://pantry-reconcile.sociobot.in/demo). It opens sa
 
 - Works offline after the first visit.
 - Pantry data stays on this device; normal use makes no third-party or cross-origin application requests.
-- Exports the shopping change as CSV.
+- Exports the shopping list as CSV.
 - Downloads an encrypted pantry backup.
+- Does not send or save the backup passphrase, so Pantry Check cannot recover it.
+- Shows an in-app reload prompt when a service-worker update is ready.
 
 Every promise is mapped to a deterministic `/demo` browser test in [`.factory/claims.json`](.factory/claims.json).
 
@@ -49,7 +51,7 @@ Generated image provenance, palette, type, spacing, and motion decisions are rec
 
 ## Deploy
 
-Publish `dist/` as a static site and route extensionless paths such as `/privacy` and `/terms` to `index.html`. `public/staticwebapp.config.json` is copied into `dist/` and provides the required CSP, feature policy, manifest MIME type, and immutable cache policy for Vite-fingerprinted assets. Do not deploy `assets/src/`; it contains production-source artwork only. The service worker controls the root scope and updates via an in-app reload prompt.
+Publish `dist/` as a static site. `public/staticwebapp.config.json` rewrites `/demo`, `/privacy`, and `/terms` to the app, while unknown paths use the designed HTTP 404 page. It also provides the CSP, feature policy, manifest MIME type, and immutable cache policy for fingerprinted assets. Do not deploy `assets/src/`; it contains production-source artwork only.
 
 ## License
 

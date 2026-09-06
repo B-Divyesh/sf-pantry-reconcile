@@ -29,6 +29,15 @@ export interface PantryBackup {
   events: PantryEvent[];
 }
 
+export interface ReconcileSession {
+  id: 'current';
+  pendingIds: string[];
+  completed: number;
+  total: number;
+  startedAt: number;
+  completedAt: number | null;
+}
+
 export const ZONES: Zone[] = ['fridge', 'freezer', 'pantry'];
 export const ZONE_LABELS: Record<Zone, string> = { fridge: 'Fridge', freezer: 'Freezer', pantry: 'Pantry' };
 export const REVIEW_AFTER_DAYS: Record<Zone, number> = { fridge: 5, freezer: 21, pantry: 30 };

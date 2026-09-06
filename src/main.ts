@@ -1,9 +1,9 @@
 import './styles.css';
 import pantryLandscapeDesktop from './images/pantry-landscape.webp';
 import pantryLandscapeMobile from './images/pantry-landscape-720.webp';
-import { ageLabel, confidence, hasActiveNameConflict, makeId, makeItem, reconcileQueue, shoppingDelta, ZONE_LABELS, ZONES, type Action, type PantryBackup, type PantryEvent, type PantryItem, type Zone } from './domain';
+import { ageLabel, confidence, hasActiveNameConflict, makeId, makeItem, reconcileQueue, shoppingDelta, ZONE_LABELS, ZONES, type Action, type PantryBackup, type PantryEvent, type PantryItem, type ReconcileSession, type Zone } from './domain';
 import { decryptBackup, encryptBackup } from './crypto';
-import { clearStorage, getEvents, getItems, removeItem, replaceBackup, saveEvent, saveItem, setStorageNamespace } from './storage';
+import { clearReconcileSession, clearStorage, getEvents, getItems, getReconcileSession, removeItem, replaceBackup, saveEvent, saveItem, saveReconcileSession, setStorageNamespace } from './storage';
 
 type View = 'home' | 'reconcile' | 'shopping' | 'settings';
 type InstallEvent = Event & { prompt: () => Promise<void>; userChoice: Promise<{ outcome: string }> };
@@ -17,6 +17,7 @@ let events: PantryEvent[] = [];
 let view: View = requestedView && validViews.includes(requestedView) ? requestedView : 'home';
 let reconcileIds: string[] = [];
 let completedThisPass = 0;
+let reconcileSession: ReconcileSession | null = null;
 let search = '';
 let installPrompt: InstallEvent | null = null;
 let undoState: { item: PantryItem; label: string } | null = null;
@@ -54,12 +55,12 @@ function nav(): string {
 
 function shell(content: string): string {
   const demoBanner = isDemo ? `<aside class="demo-banner" aria-label="Demo controls"><span><strong>Demo</strong> — sample data, nothing is saved.</span><div><button class="ghost reset-demo">Reset demo</button><a class="secondary button-link" href="/">Start for real</a></div></aside>` : '';
-  return `${demoBanner}<header class="topbar"><a class="brand" href="/" aria-label="Pantry Check home"><span class="brand-mark">${icon('check')}</span><span class="brand-name">Pantry Check</span></a><div class="status-cluster"><span class="offline-pill" ${navigator.onLine ? 'hidden' : ''}>Offline · changes stay here</span><button class="ghost small install-button" hidden>Install app</button><button class="primary compact add-button" aria-label="Add item">${icon('plus')}<span>Add item</span></button></div></header>${nav()}<main id="main">${content}</main><footer><p>Pantry Check is a private pantry review tool.</p><div><a href="/privacy">Privacy</a><a href="/terms">Terms</a></div><p class="generated-note">Built by Param Factory · v1.0.1</p></footer><div id="live" class="sr-only" aria-live="polite"></div><div class="toast-region" aria-live="polite"></div>${itemDialog()}`;
+  return `${demoBanner}<header class="topbar"><a class="brand" href="/" aria-label="Pantry Check home"><span class="brand-mark">${icon('check')}</span><span class="brand-name">Pantry Check</span></a><div class="status-cluster"><span class="offline-pill" ${navigator.onLine ? 'hidden' : ''}>Offline · changes stay here</span><button class="ghost small install-button" hidden>Install app</button><button class="primary compact add-button" aria-label="Add item">${icon('plus')}<span>Add item</span></button></div></header>${nav()}<main id="main">${content}</main><footer><p>Pantry Check is a private pantry review tool.</p><div><a href="/privacy">Privacy</a><a href="/terms">Terms</a></div><p class="generated-note">Built by Param Factory · v1.0.2</p></footer><div id="live" class="sr-only" aria-live="polite"></div><div class="toast-region" aria-live="polite"></div>${itemDialog()}`;
 }
 
 function freshness(item: PantryItem): string {
   const state = confidence(item);
-  return `<span class="confidence ${state}"><i></i>${state === 'fresh' ? 'Confident' : state === 'review' ? 'Needs a look' : 'Unconfirmed'}</span>`;
+  return `<span class="confidence ${state}"><i></i>${state === 'fresh' ? 'Checked recently' : state === 'review' ? 'Needs a check' : 'Never checked'}</span>`;
 }
 
 function itemRow(item: PantryItem): string {
@@ -67,7 +68,7 @@ function itemRow(item: PantryItem): string {
 }
 
 function emptyHome(): string {
-  return `<section class="hero empty-hero"><div class="hero-copy"><p class="eyebrow">A calmer shared kitchen</p><h1 tabindex="-1">Check the pantry<br><em>without tracking every bite.</em></h1><p>For shared kitchens that need a quick view of what is still there.</p><div class="hero-actions"><button class="primary add-button">Add your first item</button><a class="secondary button-link demo-link" href="/demo">Try it with sample data</a></div><p class="action-note">The demo opens a stocked sample pantry in a separate space.</p><ul class="proof-list" aria-label="Product facts"><li>Works offline after first visit</li><li>Pantry data stays on this device</li><li>No third-party requests</li></ul></div><picture class="hero-art"><source media="(max-width: 700px)" srcset="${pantryLandscapeMobile}"><img src="${pantryLandscapeDesktop}" width="1200" height="800" alt="Three luminous glass pantry shelves progress from hazy amber to clear mint, representing growing stock confidence." fetchpriority="high" decoding="async"></picture></section><section class="landing-section"><p class="eyebrow">How it works</p><h2>Review what changed in three steps</h2><ol class="how-it-works"><li><strong>Add staples.</strong> Name an item and choose its usual zone.</li><li><strong>Run a check.</strong> Mark each item seen, used up, or expired.</li><li><strong>Take the delta.</strong> Used items become a small shopping list.</li></ol></section><section class="landing-section limits-section"><p class="eyebrow">Privacy and limits</p><h2>It helps you remember, not judge food safety</h2><p>Expiry is a household note. Follow labels and your own judgement before eating.</p><p>Normal pantry use stays in this browser. You choose when to download or share a file.</p></section>`;
+  return `<section class="hero empty-hero"><div class="hero-copy"><p class="eyebrow">For shared kitchens</p><h1 tabindex="-1">Check pantry items <br><em>without tracking every meal.</em></h1><p>For shared kitchens that need a quick view of what is still there.</p><div class="hero-actions"><button class="primary add-button">Add your first item</button><a class="secondary button-link demo-link" href="/demo">Try it with sample data</a></div><p class="action-note">The demo opens a stocked sample pantry in a separate space.</p><ul class="proof-list" aria-label="Product facts"><li>Works offline after first visit</li><li>Pantry data stays on this device</li><li>No third-party requests</li></ul></div><picture class="hero-art"><source media="(max-width: 700px)" srcset="${pantryLandscapeMobile}"><img src="${pantryLandscapeDesktop}" width="1200" height="800" alt="Three glass pantry zones change from amber to mint as items are checked." fetchpriority="high" decoding="async"></picture></section><section class="landing-section"><p class="eyebrow">How it works</p><h2>Review what changed in three steps</h2><ol class="how-it-works"><li><strong>Add staples.</strong> Name an item and choose its usual zone.</li><li><strong>Run a check.</strong> Mark each item seen, used up, or expired.</li><li><strong>Use the shopping list.</strong> Used items become a short shopping list.</li></ol></section><section class="landing-section limits-section"><p class="eyebrow">Privacy and limits</p><h2>Use it for reminders, not food-safety decisions</h2><p>Expiry is a household note. Follow labels and your own judgement before eating.</p><p>Normal pantry use stays in this browser. You choose when to download or share a file.</p></section>`;
 }
 
 function zoneClarity(zoneItems: PantryItem[], uncertain: number): number {
@@ -79,30 +80,36 @@ function homeView(): string {
   if (!active.length) return emptyHome();
   const queue = reconcileQueue(items);
   const review = queue.filter((item) => confidence(item) !== 'fresh');
+  const remaining = reconcileSession && !reconcileSession.completedAt
+    ? reconcileSession.pendingIds.filter((id) => active.some((item) => item.id === id)).length
+    : 0;
   const filtered = active.filter((item) => item.name.toLocaleLowerCase().includes(search.toLocaleLowerCase()));
-  return `<section class="dashboard-head"><div><p class="eyebrow">Household confidence</p><h1 tabindex="-1">${review.length ? `${review.length} item${review.length === 1 ? '' : 's'} worth a look` : 'Everything feels current'}</h1><p>${review.length ? 'Oldest and unconfirmed items are ready for a quick pass.' : 'No detailed stocktake needed today.'}</p></div><button class="primary start-check">${icon('check')}Start a check</button></section>
-  <section class="zone-landscape" aria-label="Pantry zones">${ZONES.map((zone) => { const zoneItems = active.filter((item) => item.zone === zone); const uncertain = zoneItems.filter((item) => confidence(item) !== 'fresh').length; const clarity = zoneClarity(zoneItems, uncertain); return `<button class="zone-panel ${zone}" data-zone="${zone}"><span>${ZONE_LABELS[zone]}</span><strong>${zoneItems.length}</strong><small>${uncertain ? `${uncertain} to check` : 'Looking clear'}</small><progress class="zone-clarity" value="${clarity}" max="100" aria-label="${ZONE_LABELS[zone]} confidence: ${clarity}%">${clarity}%</progress></button>`; }).join('')}</section>
-  <section class="inventory-section"><div class="section-heading"><div><p class="eyebrow">Current landscape</p><h2>Your items</h2></div><label class="search-label"><span class="sr-only">Search items</span><input type="search" class="search-input" value="${escapeHtml(search)}" placeholder="Search your pantry"></label></div>${filtered.length ? `<ul class="item-list">${filtered.map(itemRow).join('')}</ul>` : `<div class="inline-empty"><p>No items match “${escapeHtml(search)}”.</p><button class="ghost clear-search">Clear search</button></div>`}</section>`;
+  const heading = remaining ? `${remaining} item${remaining === 1 ? '' : 's'} left in this check` : review.length ? `${review.length} item${review.length === 1 ? ' needs' : 's need'} a check` : 'All items were checked recently';
+  const summary = remaining ? 'Resume the check to record an outcome for every remaining item.' : review.length ? 'Oldest and unconfirmed items come first.' : 'No items need another check today.';
+  return `<section class="dashboard-head"><div><p class="eyebrow">Items to check</p><h1 tabindex="-1">${heading}</h1><p>${summary}</p></div><button class="primary ${remaining ? 'resume-check' : 'start-check'}">${icon('check')}${remaining ? 'Resume check' : 'Start a check'}</button></section>
+  <section class="zone-landscape" aria-label="Pantry zones">${ZONES.map((zone) => { const zoneItems = active.filter((item) => item.zone === zone); const uncertain = zoneItems.filter((item) => confidence(item) !== 'fresh').length; const clarity = zoneClarity(zoneItems, uncertain); return `<button class="zone-panel ${zone}" data-zone="${zone}"><span>${ZONE_LABELS[zone]}</span><strong>${zoneItems.length}</strong><small>${uncertain ? `${uncertain} to check` : 'No check needed'}</small><progress class="zone-clarity" value="${clarity}" max="100" aria-label="${ZONE_LABELS[zone]}: ${clarity}% checked recently">${clarity}%</progress></button>`; }).join('')}</section>
+  <section class="inventory-section"><div class="section-heading"><div><p class="eyebrow">Pantry items</p><h2>Your items</h2></div><label class="search-label"><span class="sr-only">Search items</span><input type="search" class="search-input" value="${escapeHtml(search)}" placeholder="Search your pantry"></label></div>${filtered.length ? `<ul class="item-list">${filtered.map(itemRow).join('')}</ul>` : `<div class="inline-empty"><p>No items match “${escapeHtml(search)}”.</p><button class="ghost clear-search">Clear search</button></div>`}</section>`;
 }
 
 function reconcileView(): string {
   const queue = reconcileIds.map((id) => items.find((item) => item.id === id)).filter((item): item is PantryItem => Boolean(item?.status === 'active'));
   const current = queue[0];
-  if (!items.some((item) => item.status === 'active')) return `<section class="focused-empty"><span class="orb">${icon('check')}</span><p class="eyebrow">Nothing to check yet</p><h1 tabindex="-1">Add what you usually keep around.</h1><p>Exact counts are optional. A name and zone are enough to begin.</p><button class="primary add-button">Add an item</button></section>`;
-  if (!current) return `<section class="focused-empty complete"><span class="orb">${icon('spark')}</span><p class="eyebrow">Pass complete</p><h1 tabindex="-1">${completedThisPass ? `${completedThisPass} confirmation${completedThisPass === 1 ? '' : 's'} made.` : 'Your pantry is current.'}</h1><p>Your confidence ages naturally from here. Come back when real life makes the picture fuzzy.</p><div class="button-row"><button class="primary" data-view="home">View pantry</button><button class="secondary restart-check">Check again</button></div></section>`;
+  if (!current && reconcileSession?.total) return `<section class="focused-empty complete"><span class="orb">${icon('spark')}</span><p class="eyebrow">Check complete</p><h1 tabindex="-1">${completedThisPass} item${completedThisPass === 1 ? '' : 's'} checked.</h1><p>Each active item now has a recorded outcome. Start another check when the pantry changes.</p><div class="button-row"><button class="primary" data-view="home">View pantry</button><button class="secondary restart-check">Check again</button></div></section>`;
+  if (!items.some((item) => item.status === 'active')) return `<section class="focused-empty"><span class="orb">${icon('check')}</span><p class="eyebrow">Nothing to check yet</p><h1 tabindex="-1">Add the items you usually keep.</h1><p>Exact counts are optional. A name and zone are enough to begin.</p><button class="primary add-button">Add an item</button></section>`;
+  if (!current) return `<section class="focused-empty"><span class="orb">${icon('check')}</span><p class="eyebrow">Check interrupted</p><h1 tabindex="-1">Choose Check again to review every item.</h1><p>No item was marked as checked without an outcome.</p><button class="primary restart-check">Check again</button></section>`;
   const progress = completedThisPass + queue.length;
-  return `<section class="reconcile-shell"><div class="reconcile-top"><div><p class="eyebrow">Quick check · uncertainty first</p><h1 tabindex="-1">What do you see?</h1></div><div class="progress-text"><strong>${completedThisPass + 1}</strong> of ${progress}</div></div><progress class="progress-track" aria-label="Check progress" value="${completedThisPass}" max="${progress}">${completedThisPass} of ${progress} checked</progress><article class="check-card ${current.zone}" data-id="${current.id}" tabindex="0" aria-label="Checking ${escapeHtml(current.name)}"><div class="shelf-glow"></div><span class="zone-label">${ZONE_LABELS[current.zone]}</span><div><h2>${escapeHtml(current.name)}</h2>${current.quantity ? `<p class="quantity">${escapeHtml(current.quantity)}</p>` : ''}<p>${ageLabel(current.lastConfirmedAt)}</p>${current.note ? `<p class="item-note">${escapeHtml(current.note)}</p>` : ''}</div><p class="swipe-hint">Swipe right for seen, left for used, down for expired</p></article><div class="reconcile-actions"><button class="action expired-action" data-action="expired"><span>↓</span>Expired<kbd>E</kbd></button><button class="action seen-action" data-action="seen"><span>✓</span>Seen<kbd>S</kbd></button><button class="action used-action" data-action="used"><span>←</span>Used up<kbd>U</kbd></button></div><p class="safety-note"><strong>Use your judgement.</strong> “Expired” is a household note, not a food-safety assessment.</p><button class="text-button end-pass" data-view="home">Finish for now</button></section>`;
+  return `<section class="reconcile-shell"><div class="reconcile-top"><div><p class="eyebrow">Oldest items first</p><h1 tabindex="-1">What do you see?</h1></div><div class="progress-text"><strong>${completedThisPass + 1}</strong> of ${progress}</div></div><progress class="progress-track" aria-label="Check progress" value="${completedThisPass}" max="${progress}">${completedThisPass} of ${progress} checked</progress><article class="check-card ${current.zone}" data-id="${current.id}" tabindex="0" aria-label="Checking ${escapeHtml(current.name)}"><div class="shelf-glow"></div><span class="zone-label">${ZONE_LABELS[current.zone]}</span><div><h2>${escapeHtml(current.name)}</h2>${current.quantity ? `<p class="quantity">${escapeHtml(current.quantity)}</p>` : ''}<p>${ageLabel(current.lastConfirmedAt)}</p>${current.note ? `<p class="item-note">${escapeHtml(current.note)}</p>` : ''}</div><p class="swipe-hint">Swipe right for seen, left for used, down for expired</p></article><div class="reconcile-actions"><button class="action expired-action" data-action="expired"><span>↓</span>Expired<kbd>E</kbd></button><button class="action seen-action" data-action="seen"><span>✓</span>Seen<kbd>S</kbd></button><button class="action used-action" data-action="used"><span>←</span>Used up<kbd>U</kbd></button></div><p class="safety-note"><strong>Use your judgement.</strong> “Expired” is a household note, not a food-safety assessment.</p><button class="text-button end-pass" data-view="home">Finish for now</button></section>`;
 }
 
 function shoppingView(): string {
   const delta = shoppingDelta(items);
-  if (!delta.length) return `<section class="focused-empty"><span class="orb sky">${icon('bag')}</span><p class="eyebrow">Shopping delta</p><h1 tabindex="-1">Nothing to replace.</h1><p>Items you use up or mark expired during a check collect here automatically.</p><button class="primary" data-view="reconcile">Start a check</button></section>`;
-  return `<section class="shopping-head"><div><p class="eyebrow">Only what changed</p><h1 tabindex="-1">Shopping delta</h1><p>${delta.length} item${delta.length === 1 ? '' : 's'} left since your last passes.</p></div><div class="button-row"><button class="secondary share-delta">Share list</button><button class="ghost export-csv">Export CSV</button></div></section><ul class="shopping-list">${delta.map((item) => `<li><div><span class="status-symbol ${item.status}" aria-hidden="true">${item.status === 'expired' ? '!' : '−'}</span><div><strong>${escapeHtml(item.name)}</strong><span>${item.status === 'expired' ? 'Marked expired' : 'Used up'} · ${ZONE_LABELS[item.zone]}</span></div></div><button class="secondary restock-item" data-id="${item.id}">Mark restocked</button></li>`).join('')}</ul><p class="safety-note"><strong>Expiry labels are advisory.</strong> Follow storage guidance and use your own judgement before consuming food.</p>`;
+  if (!delta.length) return `<section class="focused-empty"><span class="orb sky">${icon('bag')}</span><p class="eyebrow">Shopping list</p><h1 tabindex="-1">Nothing to replace.</h1><p>Items you use up or mark expired during a check appear here.</p><button class="primary" data-view="reconcile">Start a check</button></section>`;
+  return `<section class="shopping-head"><div><p class="eyebrow">Items to replace</p><h1 tabindex="-1">Shopping list</h1><p>${delta.length} item${delta.length === 1 ? '' : 's'} added by recent checks.</p></div><div class="button-row"><button class="secondary share-delta">Share list</button><button class="ghost export-csv">Export CSV</button></div></section><ul class="shopping-list">${delta.map((item) => `<li><div><span class="status-symbol ${item.status}" aria-hidden="true">${item.status === 'expired' ? '!' : '−'}</span><div><strong>${escapeHtml(item.name)}</strong><span>${item.status === 'expired' ? 'Marked expired' : 'Used up'} · ${ZONE_LABELS[item.zone]}</span></div></div><button class="secondary restock-item" data-id="${item.id}">Mark restocked</button></li>`).join('')}</ul><p class="safety-note"><strong>Expiry labels are advisory.</strong> Follow storage guidance and use your own judgement before consuming food.</p>`;
 }
 
 function settingsView(): string {
   const recent = [...events].sort((a, b) => b.at - a.at);
-  return `<section class="settings-head"><p class="eyebrow">Local-first controls</p><h1 tabindex="-1">Settings & ownership</h1><p>No household account is required. Back up or move your data when you choose.</p></section><div class="settings-grid"><section class="settings-block"><span class="settings-icon">${icon('lock')}</span><h2>Encrypted household transfer</h2><p>Create a password-protected backup. The passphrase never leaves this device and cannot be recovered.</p><form class="export-form"><label for="export-pass">Backup passphrase <span>8+ characters</span></label><input id="export-pass" type="password" minlength="8" autocomplete="new-password" required><button class="primary">Download encrypted backup</button></form><hr><form class="import-form"><label for="import-file">Restore encrypted backup</label><input id="import-file" type="file" accept=".pantry,application/json" required><label for="import-pass">Backup passphrase</label><input id="import-pass" type="password" minlength="8" autocomplete="current-password" required><button class="secondary">Restore and replace local data</button><p class="form-error" role="alert"></p></form></section></div><section class="history-section"><div class="section-heading"><div><p class="eyebrow">On this device</p><h2>Recent activity</h2></div></div>${recent.length ? `<ol class="history-list">${recent.map((event) => `<li><span>${actionLabel[event.action]} <strong>${escapeHtml(event.itemName)}</strong></span><time datetime="${new Date(event.at).toISOString()}">${formatDate(event.at)}</time></li>`).join('')}</ol>` : '<p class="inline-empty">Your checks will appear here.</p>'}</section>`;
+  return `<section class="settings-head"><p class="eyebrow">Data on this device</p><h1 tabindex="-1">Settings and data</h1><p>No household account is required. Back up or move your data when you choose.</p></section><div class="settings-grid"><section class="settings-block"><span class="settings-icon">${icon('lock')}</span><h2>Encrypted pantry backup</h2><p>Create a password-protected backup. Pantry Check does not send or save your passphrase.</p><form class="export-form"><label for="export-pass">Backup passphrase <span>8+ characters</span></label><input id="export-pass" type="password" minlength="8" autocomplete="new-password" required><button class="primary">Download encrypted backup</button></form><hr><form class="import-form"><label for="import-file">Restore encrypted backup</label><input id="import-file" type="file" accept=".pantry,application/json" required><label for="import-pass">Backup passphrase</label><input id="import-pass" type="password" minlength="8" autocomplete="current-password" required><button class="secondary">Restore and replace local data</button><p class="form-error" role="alert"></p></form></section></div><section class="history-section"><div class="section-heading"><div><p class="eyebrow">Saved activity</p><h2>Recent activity</h2></div></div>${recent.length ? `<ol class="history-list">${recent.map((event) => `<li><span>${actionLabel[event.action]} <strong>${escapeHtml(event.itemName)}</strong></span><time datetime="${new Date(event.at).toISOString()}">${formatDate(event.at)}</time></li>`).join('')}</ol>` : '<p class="inline-empty">Your checks will appear here.</p>'}</section>`;
 }
 
 function itemDialog(): string {
@@ -110,21 +117,24 @@ function itemDialog(): string {
 }
 
 function legalPage(kind: 'privacy' | 'terms'): void {
-  const privacy = `<p class="eyebrow">Effective 28 August 2026</p><h1 tabindex="-1">Privacy, in plain language</h1><p>Pantry names, notes, activity, and shopping changes stay in IndexedDB on this device.</p><h2>What leaves your device</h2><p>Normal pantry use makes no third-party or cross-origin application requests.</p><h2>Your choices</h2><p>You can export an encrypted backup, export a shopping CSV, or clear site data in your browser.</p><h2>Analytics and safety</h2><p>There are no advertising cookies, behavioral analytics, or third-party scripts. Expiry prompts are advisory.</p>`;
+  const privacy = `<p class="eyebrow">Effective 28 August 2026</p><h1 tabindex="-1">Privacy, in plain language</h1><p>Pantry names, notes, activity, and shopping list entries stay in IndexedDB on this device.</p><h2>What leaves your device</h2><p>Normal pantry use makes no third-party or cross-origin application requests.</p><h2>Your choices</h2><p>You can export an encrypted backup, export a shopping CSV, or clear site data in your browser.</p><h2>Analytics and safety</h2><p>There are no advertising cookies, behavioral analytics, or third-party scripts. Expiry prompts are advisory.</p>`;
   const terms = `<p class="eyebrow">Effective 28 August 2026</p><h1 tabindex="-1">Terms of use</h1><p>Pantry Check is a household planning utility. It does not determine whether food is safe to eat.</p><h2>Your data and responsibility</h2><p>Your local pantry data belongs to you. Keep your backup passphrase safe because Pantry Check cannot recover it.</p><h2>Availability</h2><p>The software is provided as-is under the MIT License. Offline use needs a successful first load and browser support.</p>`;
   document.title = `${kind === 'privacy' ? 'Privacy' : 'Terms'} — Pantry Check`;
-  app.innerHTML = `<header class="topbar legal-topbar"><a class="brand" href="/"><span class="brand-mark">${icon('check')}</span><span class="brand-name">Pantry Check</span></a><a class="secondary button-link" href="/">Back to app</a></header><main id="main" class="legal-page"><article><p class="legal-kicker">${kind === 'privacy' ? 'Privacy policy' : 'Terms'}</p>${kind === 'privacy' ? privacy : terms}<p>Questions? <a href="mailto:hello@sociobot.in">hello@sociobot.in</a></p></article></main><footer><p>Pantry Check is a private pantry review tool.</p><div><a href="/privacy">Privacy</a><a href="/terms">Terms</a></div><p class="generated-note">Built by Param Factory · v1.0.1</p></footer><div id="live" class="sr-only" aria-live="polite"></div>`;
+  app.innerHTML = `<header class="topbar legal-topbar"><a class="brand" href="/"><span class="brand-mark">${icon('check')}</span><span class="brand-name">Pantry Check</span></a><a class="secondary button-link" href="/">Back to app</a></header><main id="main" class="legal-page"><article><p class="legal-kicker">${kind === 'privacy' ? 'Privacy policy' : 'Terms'}</p>${kind === 'privacy' ? privacy : terms}<p>Questions? <a href="mailto:hello@sociobot.in">hello@sociobot.in</a></p></article></main><footer><p>Pantry Check is a private pantry review tool.</p><div><a href="/privacy">Privacy</a><a href="/terms">Terms</a></div><p class="generated-note">Built by Param Factory · v1.0.2</p></footer><div id="live" class="sr-only" aria-live="polite"></div>`;
 }
 
 function notFoundPage(): void {
   document.title = 'Page not found — Pantry Check';
-  app.innerHTML = `<header class="topbar legal-topbar"><a class="brand" href="/"><span class="brand-mark">${icon('check')}</span><span class="brand-name">Pantry Check</span></a></header><main id="main" class="legal-page"><article><p class="legal-kicker">404</p><h1 tabindex="-1">This pantry shelf is empty.</h1><p>That page does not exist. Return to Pantry Check to review your pantry.</p><a class="primary button-link" href="/">Go to Pantry Check</a></article></main><footer><p>Pantry Check is a private pantry review tool.</p><div><a href="/privacy">Privacy</a><a href="/terms">Terms</a></div><p class="generated-note">Built by Param Factory · v1.0.1</p></footer><div id="live" class="sr-only" aria-live="polite"></div>`;
+  app.innerHTML = `<header class="topbar legal-topbar"><a class="brand" href="/"><span class="brand-mark">${icon('check')}</span><span class="brand-name">Pantry Check</span></a></header><main id="main" class="legal-page"><article><p class="legal-kicker">Page not found</p><h1 tabindex="-1">That page does not exist.</h1><p>Return to Pantry Check to review your pantry.</p><a class="primary button-link" href="/">Go to Pantry Check</a></article></main><footer><p>Pantry Check is a private pantry review tool.</p><div><a href="/privacy">Privacy</a><a href="/terms">Terms</a></div><p class="generated-note">Built by Param Factory · v1.0.2</p></footer><div id="live" class="sr-only" aria-live="polite"></div>`;
 }
 
 function render(): void {
   if (location.pathname === '/privacy' || location.pathname === '/terms') { legalPage(location.pathname.slice(1) as 'privacy' | 'terms'); return; }
   if (location.pathname !== '/' && location.pathname !== '/demo') { notFoundPage(); return; }
-  document.title = isDemo ? 'Demo — Pantry Check' : 'Pantry Check — check the pantry';
+  const titles: Record<View, string> = isDemo
+    ? { home: 'Demo pantry — Pantry Check', reconcile: 'Demo check — Pantry Check', shopping: 'Demo shopping — Pantry Check', settings: 'Demo settings — Pantry Check' }
+    : { home: 'Pantry Check — review pantry items', reconcile: 'Check items — Pantry Check', shopping: 'Shopping list — Pantry Check', settings: 'Settings — Pantry Check' };
+  document.title = titles[view];
   const content = view === 'home' ? homeView() : view === 'reconcile' ? reconcileView() : view === 'shopping' ? shoppingView() : settingsView();
   app.innerHTML = shell(content);
   bindEvents();
@@ -149,12 +159,26 @@ function focusAndAnnounceRoute(): void {
   announce(heading?.textContent?.trim() ?? 'Pantry Check');
 }
 
-function setView(next: View, options: { reset?: boolean; replace?: boolean } = {}): void {
+function makeReconcileSession(queue: PantryItem[]): ReconcileSession {
+  return { id: 'current', pendingIds: queue.map((item) => item.id), completed: 0, total: queue.length, startedAt: Date.now(), completedAt: queue.length ? null : Date.now() };
+}
+
+function restoreReconcileSession(session: ReconcileSession): void {
+  const activeIds = new Set(items.filter((item) => item.status === 'active').map((item) => item.id));
+  reconcileIds = session.pendingIds.filter((id) => activeIds.has(id));
+  completedThisPass = Math.min(session.completed, session.total);
+  reconcileSession = { ...session, pendingIds: reconcileIds };
+}
+
+async function startReconcileSession(queue = reconcileQueue(items)): Promise<void> {
+  reconcileSession = makeReconcileSession(queue);
+  restoreReconcileSession(reconcileSession);
+  await saveReconcileSession(reconcileSession);
+}
+
+async function setView(next: View, options: { reset?: boolean; replace?: boolean } = {}): Promise<void> {
   view = next;
-  if (next === 'reconcile' && (options.reset || !reconcileIds.length)) {
-    reconcileIds = reconcileQueue(items).map((item) => item.id);
-    completedThisPass = 0;
-  }
+  if (next === 'reconcile' && (options.reset || !reconcileSession)) await startReconcileSession();
   const url = new URL(location.href);
   if (next === 'home') url.searchParams.delete('view'); else url.searchParams.set('view', next);
   if (options.replace) history.replaceState({}, '', url); else history.pushState({}, '', url);
@@ -179,6 +203,10 @@ async function reconcile(action: 'seen' | 'used' | 'expired'): Promise<void> {
     await record(changed, action);
     reconcileIds.shift();
     completedThisPass += 1;
+    if (reconcileSession) {
+      reconcileSession = { ...reconcileSession, pendingIds: [...reconcileIds], completed: completedThisPass, completedAt: reconcileIds.length ? null : Date.now() };
+      await saveReconcileSession(reconcileSession);
+    }
     render();
     showToast(`${item.name}: ${action === 'seen' ? 'confirmed' : action === 'used' ? 'added to shopping' : 'marked expired'}.`, true);
     announce(`${item.name} ${action === 'seen' ? 'confirmed' : action === 'used' ? 'used up' : 'marked expired'}.`);
@@ -211,14 +239,18 @@ function csvValue(value: string): string { return `"${value.replaceAll('"', '""'
 function bindEvents(): void {
   document.querySelectorAll<HTMLElement>('[data-view]').forEach((element) => element.addEventListener('click', (event) => {
     if (element instanceof HTMLAnchorElement) event.preventDefault();
-    setView(element.dataset.view as View, { reset: element.dataset.view === 'reconcile' });
+    void setView(element.dataset.view as View);
   }));
   document.querySelectorAll<HTMLButtonElement>('.add-button').forEach((button) => button.addEventListener('click', () => openItemDialog()));
   document.querySelectorAll<HTMLButtonElement>('.edit-item').forEach((button) => button.addEventListener('click', () => openItemDialog(items.find((item) => item.id === button.dataset.id))));
-  document.querySelector('.start-check')?.addEventListener('click', () => setView('reconcile', { reset: true }));
-  document.querySelector('.restart-check')?.addEventListener('click', () => setView('reconcile', { reset: true }));
+  document.querySelector('.start-check')?.addEventListener('click', () => void setView('reconcile', { reset: true }));
+  document.querySelector('.resume-check')?.addEventListener('click', () => void setView('reconcile'));
+  document.querySelector('.restart-check')?.addEventListener('click', () => void setView('reconcile', { reset: true }));
   document.querySelector('.reset-demo')?.addEventListener('click', () => void resetDemo());
-  document.querySelectorAll<HTMLButtonElement>('.zone-panel').forEach((button) => button.addEventListener('click', () => { reconcileIds = reconcileQueue(items, button.dataset.zone as Zone).map((item) => item.id); completedThisPass = 0; setView('reconcile'); }));
+  document.querySelectorAll<HTMLButtonElement>('.zone-panel').forEach((button) => button.addEventListener('click', async () => {
+    await startReconcileSession(reconcileQueue(items, button.dataset.zone as Zone));
+    await setView('reconcile');
+  }));
   document.querySelectorAll<HTMLButtonElement>('[data-action]').forEach((button) => button.addEventListener('click', () => void reconcile(button.dataset.action as 'seen' | 'used' | 'expired')));
   const searchInput = document.querySelector<HTMLInputElement>('.search-input');
   searchInput?.addEventListener('input', () => { search = searchInput.value; const position = searchInput.selectionStart; render(); const next = document.querySelector<HTMLInputElement>('.search-input'); next?.focus(); next?.setSelectionRange(position, position); });
@@ -244,13 +276,33 @@ function bindDialog(): void {
     if (!name) { error.textContent = 'Enter an item name, not only spaces.'; nameInput.focus(); return; }
     if (hasActiveNameConflict(items, name, id || undefined)) { error.textContent = 'That active item is already in your pantry. Edit it instead.'; nameInput.focus(); return; }
     const item = existing ? { ...existing, name, zone: data.get('zone') as Zone, quantity: String(data.get('quantity') ?? '').trim(), note: String(data.get('note') ?? '').trim(), updatedAt: Date.now() } : makeItem(name, data.get('zone') as Zone, String(data.get('quantity') ?? ''), String(data.get('note') ?? ''));
-    try { await record(item, existing ? 'edited' : 'added'); dialog.close(); render(); showToast(`${item.name} saved.`); } catch (caught) { error.textContent = caught instanceof Error ? caught.message : 'Could not save this item.'; }
+    try {
+      await record(item, existing ? 'edited' : 'added');
+      if (!existing && reconcileSession?.completedAt) {
+        reconcileSession = null;
+        reconcileIds = [];
+        completedThisPass = 0;
+        await clearReconcileSession();
+      } else if (!existing && reconcileSession && !reconcileSession.pendingIds.includes(item.id)) {
+        reconcileIds.push(item.id);
+        reconcileSession = { ...reconcileSession, pendingIds: [...reconcileIds], total: reconcileSession.total + 1 };
+        await saveReconcileSession(reconcileSession);
+      }
+      dialog.close(); render(); showToast(`${item.name} saved.`);
+    } catch (caught) { error.textContent = caught instanceof Error ? caught.message : 'Could not save this item.'; }
   });
   dialog.querySelector('.delete-item')?.addEventListener('click', async () => {
     const id = (form.elements.namedItem('id') as HTMLInputElement).value;
     const item = items.find((entry) => entry.id === id);
     if (!item || !confirm(`Remove “${item.name}” from Pantry Check? Its activity history will remain.`)) return;
-    await removeItem(id); items = items.filter((entry) => entry.id !== id); dialog.close(); render(); showToast(`${item.name} removed.`);
+    await removeItem(id);
+    items = items.filter((entry) => entry.id !== id);
+    if (reconcileSession?.pendingIds.includes(id)) {
+      reconcileIds = reconcileIds.filter((entry) => entry !== id);
+      reconcileSession = { ...reconcileSession, pendingIds: [...reconcileIds], total: Math.max(completedThisPass, reconcileSession.total - 1), completedAt: reconcileIds.length ? null : Date.now() };
+      await saveReconcileSession(reconcileSession);
+    }
+    dialog.close(); render(); showToast(`${item.name} removed.`);
   });
 }
 
@@ -262,11 +314,18 @@ function bindShopping(): void {
       showToast(message); announce(message); return;
     }
     undoState = { item: { ...item }, label: item.name };
-    await record({ ...item, status: 'active', lastConfirmedAt: Date.now(), updatedAt: Date.now() }, 'restocked'); render(); showToast(`${item.name} returned to ${ZONE_LABELS[item.zone]}.`, true);
+    await record({ ...item, status: 'active', lastConfirmedAt: Date.now(), updatedAt: Date.now() }, 'restocked');
+    if (reconcileSession?.completedAt) {
+      reconcileSession = null;
+      reconcileIds = [];
+      completedThisPass = 0;
+      await clearReconcileSession();
+    }
+    render(); showToast(`${item.name} returned to ${ZONE_LABELS[item.zone]}.`, true);
   }));
   document.querySelector('.share-delta')?.addEventListener('click', async () => {
-    const text = `Pantry Check — shopping delta\n${shoppingDelta(items).map((item) => `• ${item.name}${item.quantity ? ` (${item.quantity})` : ''}`).join('\n')}`;
-    try { if (navigator.share) await navigator.share({ title: 'Shopping delta', text }); else { await navigator.clipboard.writeText(text); showToast('Shopping delta copied.'); } } catch (error) { if ((error as DOMException).name !== 'AbortError') showToast('Could not share. Try Export CSV instead.'); }
+    const text = `Pantry Check — shopping list\n${shoppingDelta(items).map((item) => `• ${item.name}${item.quantity ? ` (${item.quantity})` : ''}`).join('\n')}`;
+    try { if (navigator.share) await navigator.share({ title: 'Shopping list', text }); else { await navigator.clipboard.writeText(text); showToast('Shopping list copied.'); } } catch (error) { if ((error as DOMException).name !== 'AbortError') showToast('Could not share. Try Export CSV instead.'); }
   });
   document.querySelector('.export-csv')?.addEventListener('click', () => {
     const rows = [['Item', 'Zone', 'Reason', 'Rough amount'], ...shoppingDelta(items).map((item) => [item.name, ZONE_LABELS[item.zone], item.status, item.quantity])];
@@ -282,7 +341,13 @@ function bindSettings(): void {
   document.querySelector<HTMLFormElement>('.import-form')?.addEventListener('submit', async (event) => {
     event.preventDefault(); const form = event.currentTarget as HTMLFormElement; const file = (form.elements.namedItem('import-file') as HTMLInputElement).files?.[0]; const passphrase = (form.elements.namedItem('import-pass') as HTMLInputElement).value; const error = form.querySelector<HTMLElement>('.form-error')!;
     if (!file) return;
-    try { const backup = await decryptBackup(await file.text(), passphrase); if (!confirm(`Replace this device's pantry with ${backup.items.length} items from the backup?`)) return; await replaceBackup(backup); items = backup.items; events = backup.events; render(); showToast('Encrypted backup restored.'); } catch (caught) { error.textContent = caught instanceof Error ? caught.message : 'Could not restore this backup.'; }
+    try {
+      const backup = await decryptBackup(await file.text(), passphrase);
+      if (!confirm(`Replace this device's pantry with ${backup.items.length} items from the backup?`)) return;
+      await replaceBackup(backup);
+      items = backup.items; events = backup.events; reconcileSession = null; reconcileIds = []; completedThisPass = 0;
+      render(); showToast('Encrypted backup restored.');
+    } catch (caught) { error.textContent = caught instanceof Error ? caught.message : 'Could not restore this backup.'; }
   });
 }
 
@@ -310,16 +375,33 @@ window.addEventListener('online', () => { updateTransientUi(); showToast('Back o
 window.addEventListener('offline', updateTransientUi);
 window.addEventListener('beforeinstallprompt', (event) => { event.preventDefault(); installPrompt = event as InstallEvent; updateTransientUi(); });
 window.addEventListener('popstate', () => {
+  void (async () => {
   const next = new URL(location.href).searchParams.get('view') as View | null;
   view = next && validViews.includes(next) ? next : 'home';
-  if (view === 'reconcile') { reconcileIds = reconcileQueue(items).map((item) => item.id); completedThisPass = 0; }
+  if (view === 'reconcile') {
+    if (reconcileSession) restoreReconcileSession(reconcileSession);
+    else await startReconcileSession();
+  }
   render();
   focusAndAnnounceRoute();
+  })();
 });
 document.addEventListener('click', async (event) => {
   const target = event.target as HTMLElement;
   if (target.closest('.update-button') && updateWorker) { updateWorker.postMessage({ type: 'SKIP_WAITING' }); return; }
-  if (target.closest('.undo-button') && undoState) { const previous = undoState.item; undoState = null; await saveItem(previous); items = items.filter((item) => item.id !== previous.id).concat(previous); if (view === 'reconcile' && !reconcileIds.includes(previous.id)) { reconcileIds.unshift(previous.id); completedThisPass = Math.max(0, completedThisPass - 1); } render(); showToast(`${previous.name} restored.`); }
+  if (target.closest('.undo-button') && undoState) {
+    const previous = undoState.item;
+    undoState = null;
+    await saveItem(previous);
+    items = items.filter((item) => item.id !== previous.id).concat(previous);
+    if (view === 'reconcile' && reconcileSession && !reconcileIds.includes(previous.id)) {
+      reconcileIds.unshift(previous.id);
+      completedThisPass = Math.max(0, completedThisPass - 1);
+      reconcileSession = { ...reconcileSession, pendingIds: [...reconcileIds], completed: completedThisPass, completedAt: null };
+      await saveReconcileSession(reconcileSession);
+    }
+    render(); showToast(`${previous.name} restored.`);
+  }
 });
 
 async function registerServiceWorker(): Promise<void> {
@@ -333,8 +415,12 @@ async function registerServiceWorker(): Promise<void> {
 async function init(): Promise<void> {
   if (location.pathname !== '/' && location.pathname !== '/demo' && location.pathname !== '/privacy' && location.pathname !== '/terms') { render(); return; }
   try {
-    [items, events] = await Promise.all([getItems(), getEvents()]);
+    [items, events, reconcileSession] = await Promise.all([getItems(), getEvents(), getReconcileSession()]);
     if (isDemo && items.length === 0 && events.length === 0) await seedDemo();
+    if (view === 'reconcile') {
+      if (reconcileSession) restoreReconcileSession(reconcileSession);
+      else await startReconcileSession();
+    }
     render();
     void registerServiceWorker();
   }
@@ -369,6 +455,7 @@ async function resetDemo(): Promise<void> {
     events = [];
     reconcileIds = [];
     completedThisPass = 0;
+    reconcileSession = null;
     await seedDemo();
     view = 'home';
     const url = new URL(location.href);

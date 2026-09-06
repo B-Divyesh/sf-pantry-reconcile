@@ -1,7 +1,7 @@
-import type { PantryBackup, PantryEvent, PantryItem } from './domain';
+import type { PantryBackup, PantryEvent, PantryItem, ReconcileSession } from './domain';
 
 const BASE_DB_NAME = 'pantry-check';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 let namespace = '';
 
 /** Select storage before any pantry operation. Demo data has its own database. */
@@ -27,6 +27,7 @@ export function openDatabase(): Promise<IDBDatabase> {
       const db = open.result;
       if (!db.objectStoreNames.contains('items')) db.createObjectStore('items', { keyPath: 'id' });
       if (!db.objectStoreNames.contains('events')) db.createObjectStore('events', { keyPath: 'id' });
+      if (!db.objectStoreNames.contains('checkSessions')) db.createObjectStore('checkSessions', { keyPath: 'id' });
     };
     open.onsuccess = () => resolve(open.result);
     open.onerror = () => reject(open.error ?? new Error('Pantry Check could not open local storage.'));
@@ -41,6 +42,28 @@ async function all<T>(store: 'items' | 'events'): Promise<T[]> {
 
 export const getItems = () => all<PantryItem>('items');
 export const getEvents = () => all<PantryEvent>('events');
+
+export async function getReconcileSession(): Promise<ReconcileSession | null> {
+  const db = await openDatabase();
+  try { return await request(db.transaction('checkSessions').objectStore('checkSessions').get('current')) as ReconcileSession | undefined ?? null; }
+  finally { db.close(); }
+}
+
+export async function saveReconcileSession(session: ReconcileSession): Promise<void> {
+  const db = await openDatabase();
+  const tx = db.transaction('checkSessions', 'readwrite');
+  tx.objectStore('checkSessions').put(session);
+  await transactionDone(tx);
+  db.close();
+}
+
+export async function clearReconcileSession(): Promise<void> {
+  const db = await openDatabase();
+  const tx = db.transaction('checkSessions', 'readwrite');
+  tx.objectStore('checkSessions').delete('current');
+  await transactionDone(tx);
+  db.close();
+}
 
 export async function saveItem(item: PantryItem): Promise<void> {
   const db = await openDatabase();
@@ -76,11 +99,12 @@ function transactionDone(tx: IDBTransaction): Promise<void> {
 
 export async function replaceBackup(backup: PantryBackup): Promise<void> {
   const db = await openDatabase();
-  const tx = db.transaction(['items', 'events'], 'readwrite');
+  const tx = db.transaction(['items', 'events', 'checkSessions'], 'readwrite');
   const itemStore = tx.objectStore('items');
   const eventStore = tx.objectStore('events');
   itemStore.clear();
   eventStore.clear();
+  tx.objectStore('checkSessions').clear();
   backup.items.forEach((item) => itemStore.put(item));
   backup.events.forEach((event) => eventStore.put(event));
   await transactionDone(tx);
