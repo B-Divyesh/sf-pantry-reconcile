@@ -1,0 +1,14 @@
+{
+  "url": "https://pantry-reconcile.sociobot.in",
+  "loadMs": 659,
+  "errors": [],
+  "a11y": {
+    "title": "Pantry Check — review pantry items",
+    "lang": "en",
+    "h1": 1,
+    "main": true,
+    "imgsMissingAlt": 0,
+    "buttonsUnlabeled": 0,
+    "textLength": 919
+  }
+}

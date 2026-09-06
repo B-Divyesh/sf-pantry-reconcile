@@ -1,0 +1,71 @@
+{
+  "checkedAt": "2026-09-06T05:28:01.348Z",
+  "base": "https://pantry-reconcile.sociobot.in",
+  "desktop": {
+    "first": {
+      "title": "Pantry Check — review pantry items",
+      "h1": "Check pantry items\nwithout tracking every meal.",
+      "audience": "For shared kitchens that need a quick view of what is still there.",
+      "firstAction": "Add your first item",
+      "sampleAction": "Try it with sample data"
+    },
+    "zeroAction": {
+      "item": "Red lentils",
+      "value": "0",
+      "max": "3"
+    },
+    "partialItem": "Oat milk",
+    "titles": {
+      "Pantry": "Pantry Check — review pantry items",
+      "Check": "Check items — Pantry Check",
+      "Shopping": "Shopping list — Pantry Check",
+      "Settings": "Settings — Pantry Check"
+    },
+    "realCount": 0,
+    "requestCount": 45,
+    "unknownStatus": 404
+  },
+  "phone": {
+    "titles": {
+      "demo": "Demo pantry — Pantry Check"
+    },
+    "boxes": [
+      {
+        "x": 16,
+        "y": 246,
+        "width": 358,
+        "height": 176.875
+      },
+      {
+        "x": 16,
+        "y": 438.875,
+        "width": 358,
+        "height": 56.09375
+      },
+      {
+        "x": 16,
+        "y": 510.96875,
+        "width": 182,
+        "height": 44
+      },
+      {
+        "x": 16,
+        "y": 564.96875,
+        "width": 214,
+        "height": 44
+      },
+      {
+        "x": 16,
+        "y": 697.0625,
+        "width": 358,
+        "height": 72.5
+      }
+    ],
+    "noHorizontalOverflow": true
+  },
+  "offline": {
+    "sampleRetained": true,
+    "statusShown": true
+  },
+  "errors": []
+}
