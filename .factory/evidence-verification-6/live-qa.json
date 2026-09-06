@@ -1,0 +1,162 @@
+{
+  "checkedAt": "2026-09-06T05:55:44.093Z",
+  "base": "https://pantry-reconcile.sociobot.in",
+  "candidate": "7df5787136a1d0b8a0fce5812a6288da86742739",
+  "firstScreen": {
+    "title": "Pantry Check — review pantry items",
+    "h1": "Check pantry items\nwithout tracking every meal.",
+    "audience": "For shared kitchens that need a quick view of what is still there.",
+    "realAction": "Add your first item",
+    "sampleAction": "Try it with sample data",
+    "facts": [
+      "Works offline after first visit",
+      "Pantry data stays on this device",
+      "No third-party requests"
+    ]
+  },
+  "interruptedCheck": {
+    "zero": {
+      "item": "Red lentils",
+      "value": "0",
+      "max": "3"
+    },
+    "zeroReload": "restored",
+    "zeroExit": 3,
+    "partialReload": {
+      "item": "Oat milk",
+      "completed": 1,
+      "remaining": 2
+    },
+    "completedReload": 3,
+    "freshnessAfterCompletionOnly": true
+  },
+  "demo": {
+    "sample": [
+      "Oat milk",
+      "Frozen peas",
+      "Red lentils"
+    ],
+    "shoppingOutput": [
+      "Pasta",
+      "Red lentils",
+      "Oat milk"
+    ],
+    "csvRows": 4,
+    "reset": true,
+    "labelPersistent": true,
+    "databases": [
+      "demo:pantry-check",
+      "pantry-check"
+    ],
+    "realItemsAfterExit": 0
+  },
+  "realFlow": {
+    "whitespaceRejected": true,
+    "dialogFocusAndEscape": true,
+    "boundaries": {
+      "name": 80,
+      "amount": 40,
+      "note": 160
+    },
+    "duplicateRejected": true,
+    "searchAndClear": true
+  },
+  "routes": {
+    "realTitles": {
+      "Pantry": "Pantry Check — review pantry items",
+      "Check": "Check items — Pantry Check",
+      "Shopping": "Shopping list — Pantry Check",
+      "Settings": "Settings — Pantry Check"
+    },
+    "legalTitles": {
+      "privacy": "Privacy — Pantry Check",
+      "terms": "Terms — Pantry Check"
+    },
+    "unknownStatus": 404,
+    "axe": {
+      "404": 0,
+      "/privacy": 0,
+      "/terms": 0,
+      "demo-pantry": 0,
+      "demo-check": 0,
+      "demo-shopping": 0,
+      "demo-settings": 0
+    },
+    "linkStatuses": {
+      "/demo?view=settings": 200,
+      "/": 200,
+      "/demo": 200,
+      "/demo?view=reconcile": 200,
+      "/demo?view=shopping": 200,
+      "/privacy": 200,
+      "/terms": 200
+    }
+  },
+  "phone": {
+    "firstScreenAboveDock": true,
+    "noHorizontalOverflow": true,
+    "touch": {
+      "Reset demo": {
+        "width": 161,
+        "height": 44
+      },
+      "Start for real": {
+        "width": 161,
+        "height": 44
+      }
+    },
+    "reducedMotionFocus": {
+      "focused": true,
+      "top": 8,
+      "bottom": 56,
+      "outline": 3,
+      "transition": "1e-05s",
+      "animation": "1e-05s"
+    },
+    "zoom200": {
+      "scale": 2,
+      "h1": true,
+      "banner": true,
+      "controls": true
+    }
+  },
+  "offline": {
+    "cacheBefore": [
+      "pantry-v8"
+    ],
+    "sampleRetained": true,
+    "statusShown": true
+  },
+  "recovery": {
+    "encryptedPlaintextAbsent": true,
+    "passphraseCleared": true,
+    "wrongPassphraseRejected": true,
+    "malformedBackupRejected": true,
+    "cancelledDeleteSafe": true,
+    "confirmedDelete": true,
+    "validRestore": true,
+    "storageBlocked": true
+  },
+  "findings": [
+    {
+      "id": "active-check-resume-after-home-reload",
+      "severity": "medium",
+      "state": "zero-action",
+      "expected": "Red lentils with 0 of 3 complete",
+      "actual": {
+        "cardCount": 0,
+        "heading": "0 items checked.",
+        "url": "https://pantry-reconcile.sociobot.in/demo?view=reconcile"
+      },
+      "partial": {
+        "expected": "Oat milk with 1 of 3 complete",
+        "actual": {
+          "cardCount": 0,
+          "heading": "0 items checked.",
+          "url": "https://pantry-reconcile.sociobot.in/demo?view=reconcile"
+        }
+      }
+    }
+  ],
+  "errors": []
+}
